@@ -1,0 +1,62 @@
+# Chainlink Runtime Environment (CRE) - Workflow Configuration
+# Run: cre simulate src/chainlink/workflow.ts --config src/chainlink/cre-config.yaml
+
+workflow:
+  name: "privacy-defi-agent-workflow"
+  version: "1.0.0"
+  description: "Privacy-first DeFi AI Agent — orchestrates Naryo events through 0G inference to Uniswap execution via Hedera"
+
+  # CRE SDK entry point
+  entrypoint: "../chainlink/workflow.ts"
+  runtime: "typescript"
+
+  # Simulation settings
+  simulation:
+    enabled: true
+    mockExternalCalls: true
+    logLevel: "info"
+
+  # DON deployment (Chainlink team deploys after successful simulation)
+  don:
+    url: "${CRE_DON_URL}"
+    workflowId: "${CRE_WORKFLOW_ID}"
+    signingKey: "${CRE_SIGNING_KEY}"
+
+  # Trigger: receive events from Naryo listener
+  triggers:
+    - name: "pool-event-trigger"
+      type: "external-api"
+      source: "naryo-multichain-listener"
+      interval: "5s"
+
+  # Steps
+  steps:
+    - name: "validate-input"
+      type: "compute"
+      description: "Validate correlated story meets minimum confidence threshold"
+
+    - name: "chainlink-price-feed"
+      type: "data-feed"
+      description: "Fetch live price from Chainlink Data Feed oracle"
+      feed: "ETH/USD"
+
+    - name: "privacy-route"
+      type: "conditional"
+      description: "Route execution based on user privacy preference (Yes/No)"
+
+    - name: "trigger-uniswap"
+      type: "external-api"
+      description: "Call Uniswap API for trade execution"
+      url: "${UNISWAP_API_BASE_URL}/quote"
+      method: "POST"
+
+    - name: "log-hcs"
+      type: "blockchain-write"
+      description: "Log audit trail to Hedera Consensus Service (public mode only)"
+      contract: "Hedera HCS"
+      conditionalOn: "privacyEnabled === false"
+
+  # Output
+  output:
+    format: "json"
+    destination: "stdout"
