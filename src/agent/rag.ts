@@ -74,6 +74,7 @@ export class ZGRAGMemory {
       if (uploadErr) throw new Error(uploadErr);
       
       console.log(`✅ [0G Storage] Memory successfully broadcast to Storage Indexer! TX: ${tx}`);
+      console.log(`   Explorer: https://chainscan-galileo.0g.ai/tx/${tx}`);
       return rootHash || tx;
       
     } catch (error: any) {
