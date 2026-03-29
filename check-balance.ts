@@ -26,7 +26,15 @@ async function checkBalance() {
 
     console.log(`\n💰 Balance on this Network: ${balanceEth} ETH`);
     
-    if (balanceWei === 0n) {
+    // Check USDC
+    const usdcAddress = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+    const usdcAbi = ["function balanceOf(address account) external view returns (uint256)"];
+    const usdcContract = new ethers.Contract(usdcAddress, usdcAbi, provider);
+    const usdcBalance = await usdcContract.balanceOf(address);
+    // USDC has 6 decimals on Sepolia
+    console.log(`💰 USDC Balance: ${ethers.formatUnits(usdcBalance, 6)} USDC`);
+
+    if (balanceWei === 0n && usdcBalance === 0n) {
       console.log(`\n⚠️ The balance is exactly 0. Warning:`);
       console.log(`1. Double check if this is the exact wallet Address that holds the 5 ETH.`);
       console.log(`2. If the 5 ETH is on L1 Sepolia, but this script is checking Unichain Sepolia, it will show 0.`);

@@ -5,7 +5,6 @@ export interface iNFTMetadata {
   agentId: string;
   framework: string;
   capabilities: string[];
-  hcs14TopicId: string;
   createdAt: string;
   storageUri?: string; // 0G Storage URI for extended metadata
 }

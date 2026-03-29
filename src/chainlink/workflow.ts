@@ -27,12 +27,10 @@ interface CREStepResult {
 /**
  * Chainlink Runtime Environment (CRE) Workflow.
  *
- * This workflow orchestrates the full DeFi agent flow:
  *   1. Receive Naryo correlated event
  *   2. Validate strategy from 0G Compute
  *   3. Privacy-route based on user preference
  *   4. Execute Uniswap swap via external API call
- *   5. Log result to Hedera HCS
  *
  * Built with CRE TypeScript SDK pattern.
  * Run `cre simulate src/chainlink/workflow.ts` to simulate via CRE CLI.
@@ -72,8 +70,7 @@ export class CREOrchestratorWorkflow {
     // ── Step 4: Trigger External API (Uniswap) ─────────────────────
     steps.push(await this.stepTriggerUniswap(input));
 
-    // ── Step 5: Log to HCS ────────────────────────────────────────
-    steps.push(await this.stepLogToHCS(input));
+
 
     const allSuccess = steps.every((s) => s.status !== "failed");
     const result: CREWorkflowResult = {
@@ -142,8 +139,8 @@ export class CREOrchestratorWorkflow {
       name: "privacy-route",
       status: "success",
       output: input.privacyEnabled
-        ? "PRIVATE mode: execution routed through TEE; no public HCS log"
-        : "PUBLIC mode: execution will be logged to Hedera HCS",
+        ? "PRIVATE mode: execution routed through TEE; no public log"
+        : "PUBLIC mode: execution routed normally without TEE",
     };
   }
 
@@ -161,22 +158,7 @@ export class CREOrchestratorWorkflow {
     };
   }
 
-  private async stepLogToHCS(
-    input: CREWorkflowInput
-  ): Promise<CREStepResult> {
-    if (input.privacyEnabled) {
-      return {
-        name: "log-hcs",
-        status: "skipped",
-        output: "Private mode — HCS public log suppressed",
-      };
-    }
-    return {
-      name: "log-hcs",
-      status: "success",
-      output: `Audit log queued for HCS topic (agent: ${input.agentId})`,
-    };
-  }
+
 
   private printSummary(result: CREWorkflowResult): void {
     console.log("\n📋 [CRE Workflow] Execution Summary:");

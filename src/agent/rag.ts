@@ -30,7 +30,7 @@ export class ZGRAGMemory {
 
   constructor() {
     // Use verified Galileo Testnet Indexer RPC
-    this.indexerRpc = "https://rpc-storage-testnet.0g.ai";
+    this.indexerRpc = "https://indexer-storage-testnet-standard.0g.ai";
     this.evmRpc = process.env.ZG_RPC_URL || "https://evmrpc-testnet.0g.ai";
     this.dryRun = process.env.DRY_RUN === "true";
 

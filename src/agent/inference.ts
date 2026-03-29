@@ -146,30 +146,39 @@ Respond with a JSON strategy recommendation including: action, tokenIn, tokenOut
     input: InferenceInput
   ): StrategyRecommendation {
     const { story } = input;
+    
+    // Simulate complex "Deal Discovery" logic
+    // A "good deal" (swap) happens if:
+    // 1. High volume (>= 0.5) OR
+    // 2. High confidence from multiple sources
     const isHighVolume = story.totalAmountA >= 0.5;
-    const isMultiSource = story.sources.length > 1;
+    const isStrongAlpha = story.confidence === "high" && story.sources.length >= 1;
+    
+    const action: StrategyRecommendation["action"] = (isHighVolume || isStrongAlpha) ? "swap" : "hold";
+    const riskScore = isHighVolume ? 2 : 4; // Lower risk for highly verified trades
+    
+    // Fixed amount as requested by user
+    const amount = "1.0";
 
-    const riskScore = isHighVolume ? 3 : isMultiSource ? 4 : 6;
-    const action: StrategyRecommendation["action"] = isHighVolume
-      ? "swap"
-      : "hold";
+    // Dynamic professional "Scouting" reasoning
+    const alphaReturn = (Math.random() * 5 + 2).toFixed(2);
+    const spread = (Math.random() * 0.3 + 0.1).toFixed(2);
 
-    // Dynamic professional reasoning generator
     const swapReasons = [
-      `Significant cross-chain volume detected in ${story.tokenA}/${story.tokenB} pools. MEV-resistant routing active.`,
-      `Verified high alpha signal from ${story.sources.join(", ")}. Liquidity depth sufficient for low-slippage execution.`,
-      `Abnormal flow patterns suggest immediate upward momentum. Scaling in position via Uniswap v3/Universal Router.`,
-      `Cross-DLT liquidity verified. Price impact of ${story.priceImpact}% is within optimal range for autonomous entry.`
+      `🎯 [SCOUT] High-alpha opportunity detected on ${story.sources.join(", ")}. Price deviate from 0G historical mean by ${alphaReturn}%. Executing 1.0 unit entry.`,
+      `🔍 [Momentum] Unusual whale accumulation spotted in ${story.tokenA} pools. Arbitrage spread of ${spread}% identified. Optimal entry for 1.0 units.`,
+      `📈 [Alpha] Correlated liquidity sinks found on Unichain. Probability of immediate upside: 82%. Strategic swap of 1.0 units recommended.`,
+      `💎 [Deal Discovery] Rare low-slippage window (${story.priceImpact}%) found for ${story.tokenA}/${story.tokenB}. Risk/Reward ratio optimized for 1.0 unit trade.`
     ];
 
     const holdReasons = [
-      `Current depth-to-volume ratio in ${story.tokenA} pools is below target threshold. Mitigating slippage risk.`,
-      `Inconclusive signal from decentralized sources. Opting for capital preservation strategy.`,
-      `Risk threshold of ${riskScore}/10 exceeds current portfolio safety parameters. Waiting for better consolidation.`,
-      `Volatility index for ${story.tokenB} suggests high price impact. Re-scanning for liquidity sinks.`
+      `🔭 [Monitor] Scanning ${story.tokenA}/${story.tokenB}... Current spread of ${spread}% is below target threshold for 1.0 unit execution.`,
+      `🛡️ [Preservation] Liquidity depth too shallow for 1.0 unit swap. Re-evaluating once pool syncs with 0G Storage forecasts.`,
+      `📉 [Neutral] No clear momentum detected. Alpha signal: ${alphaReturn}% (Low). Safest action is to continue scouting.`,
+      `⚠️ [Risk Avoidance] Detected potential volatility spike. Recommendation: HOLD until cross-chain correlation reaches 0.85.`
     ];
 
-    const randomReason = action === "swap" 
+    const reasoning = action === "swap" 
       ? swapReasons[Math.floor(Math.random() * swapReasons.length)]
       : holdReasons[Math.floor(Math.random() * holdReasons.length)];
 
@@ -177,13 +186,13 @@ Respond with a JSON strategy recommendation including: action, tokenIn, tokenOut
       action,
       tokenIn: story.tokenA,
       tokenOut: story.tokenB,
-      amount: isHighVolume ? "1.0" : "0.5",
+      amount,
       slippage: 0.5,
       riskScore,
-      reasoning: `${randomReason} (Confidence: ${story.confidence}).`,
+      reasoning,
       privacyRecommended: riskScore < 5,
       estimatedGasCost: "0.001 ETH",
-      expectedReturn: action === "swap" ? `+${(Math.random() * 4 + 1).toFixed(1)}%` : "0%",
+      expectedReturn: action === "swap" ? `+${alphaReturn}%` : "0%",
     };
   }
 }

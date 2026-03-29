@@ -34,7 +34,7 @@ export class PrivacyManager {
     console.log("-------------------------------------------------------");
     console.log("Do you want to execute this trade in PRIVATE mode?");
     console.log(" - YES: TEE execution, no public audit log, hashed on-chain");
-    console.log(" - NO : Public Hedera Consensus Service audit trail");
+    console.log(" - NO : Public on-chain audit trail");
     console.log(`\nAI Recommendation: ${recommended ? "YES (High Risk / Alpha)" : "NO (Low Risk)"}`);
     
     // In dry-run we can mock user input if we don't want to block the script

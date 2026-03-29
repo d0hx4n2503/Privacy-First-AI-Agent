@@ -1,0 +1,57 @@
+[
+  {
+    "name": "ETH/USDC",
+    "tokenA": "ETH",
+    "tokenB": "USDC",
+    "poolAddress": "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640",
+    "chain": "unichain-sepolia",
+    "tvl": 52000000,
+    "volume24h": 18500000,
+    "fee": 0.05,
+    "notes": "Blue-chip pair, highest liquidity on Unichain"
+  },
+  {
+    "name": "LINK/ETH",
+    "tokenA": "LINK",
+    "tokenB": "ETH",
+    "poolAddress": "0xa6Cc3C2531FdaA6Ae1A3CA84c2855806728693e8",
+    "chain": "unichain-sepolia",
+    "tvl": 9200000,
+    "volume24h": 3400000,
+    "fee": 0.3,
+    "notes": "Oracle token pair, volatile but high alpha"
+  },
+  {
+    "name": "DAI/USDC",
+    "tokenA": "DAI",
+    "tokenB": "USDC",
+    "poolAddress": "0x5777d92f208679DB4b9778590Fa3CAB3aC9e2168",
+    "chain": "ethereum-sepolia",
+    "tvl": 120000000,
+    "volume24h": 8000000,
+    "fee": 0.01,
+    "notes": "Stable-stable pair, low risk, capital efficiency"
+  },
+  {
+    "name": "WBTC/ETH",
+    "tokenA": "WBTC",
+    "tokenB": "ETH",
+    "poolAddress": "0xCBCdF9626bC03E24f779434178A73a0B4bad62eD",
+    "chain": "ethereum-sepolia",
+    "tvl": 31000000,
+    "volume24h": 14000000,
+    "fee": 0.3,
+    "notes": "BTC-ETH correlation play, high TVL"
+  },
+  {
+    "name": "USDC/ARB",
+    "tokenA": "USDC",
+    "tokenB": "ARB",
+    "poolAddress": "0x5691e7fd7C9B7E93d10aF024D0CAef3a14523875",
+    "chain": "unichain-sepolia",
+    "tvl": 4100000,
+    "volume24h": 2300000,
+    "fee": 0.3,
+    "notes": "L2 governance token, high momentum"
+  }
+]

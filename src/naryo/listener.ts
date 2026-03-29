@@ -5,7 +5,7 @@ import axios from "axios";
 
 export interface PoolEvent {
   id: string;
-  source: "hedera" | "unichain" | "ethereum";
+  source: "unichain" | "ethereum";
   type: "swap" | "mint" | "burn" | "sync";
   pool: string;
   tokenA: string;
@@ -20,21 +20,14 @@ export interface PoolEvent {
 }
 
 export class NaryoListener extends EventEmitter {
-  private hederaMirrorUrl: string;
   private unichainRpcUrl: string;
-  private hederaJsonRpcUrl: string;
   private isRunning: boolean = false;
   private pollingInterval?: ReturnType<typeof setInterval>;
 
   constructor() {
     super();
-    this.hederaMirrorUrl =
-      process.env.HEDERA_MIRROR_NODE_URL ||
-      "https://testnet.mirrornode.hedera.com";
     this.unichainRpcUrl =
       process.env.UNICHAIN_RPC_URL || "https://sepolia.unichain.org";
-    this.hederaJsonRpcUrl =
-      process.env.HEDERA_JSON_RPC_URL || "https://testnet.hashio.io/api";
   }
 
   /**
@@ -44,13 +37,10 @@ export class NaryoListener extends EventEmitter {
     this.isRunning = true;
     console.log("🔍 [Naryo] Starting multichain event listener...");
 
-    // Start Hedera Mirror Node polling
-    this.startHederaMirrorPolling();
-
     // Start Unichain polling
     this.startUnichainPolling();
 
-    console.log("✅ [Naryo] Listening on Hedera Testnet + Unichain Sepolia");
+    console.log("✅ [Naryo] Listening on Unichain Sepolia");
   }
 
   stop(): void {
@@ -60,44 +50,7 @@ export class NaryoListener extends EventEmitter {
   }
 
   // ───────────────────────────────────────────────────────────────────
-  // Hedera Mirror Node — REST API polling
-  // ───────────────────────────────────────────────────────────────────
-  private startHederaMirrorPolling(): void {
-    let lastTimestamp = "0";
 
-    const poll = async () => {
-      if (!this.isRunning) return;
-      try {
-        const url = `${this.hederaMirrorUrl}/api/v1/contracts/results?limit=25&order=asc&timestamp=gt:${lastTimestamp}`;
-        const { data } = await axios.get(url);
-
-        if (data?.results?.length > 0) {
-          for (const result of data.results) {
-            if (!result.contract_id) continue;
-
-            // Parse as a pool event (simplified — real Naryo does deeper decode)
-            const evt = this.parseHederaContractResult(result);
-            if (evt) {
-              console.log(
-                `📡 [Naryo/Hedera] Pool event: ${evt.type} on ${evt.pool} (${evt.tokenA}/${evt.tokenB})`
-              );
-              this.emit("poolEvent", evt);
-            }
-          }
-          const last = data.results[data.results.length - 1];
-          if (last?.timestamp) lastTimestamp = last.timestamp;
-        }
-      } catch (err) {
-        if (process.env.LOG_LEVEL === "debug") {
-          console.error("[Naryo/Hedera] Poll error:", err);
-        }
-      }
-    };
-
-    // Poll every 5 seconds
-    this.pollingInterval = setInterval(poll, 5000);
-    poll(); // immediate first call
-  }
 
   // ───────────────────────────────────────────────────────────────────
   // Unichain / Ethereum — JSON-RPC eth_getLogs polling
@@ -166,27 +119,7 @@ export class NaryoListener extends EventEmitter {
   // ───────────────────────────────────────────────────────────────────
   // Parsers
   // ───────────────────────────────────────────────────────────────────
-  private parseHederaContractResult(
-    result: Record<string, unknown>
-  ): PoolEvent | null {
-    try {
-      return {
-        id: `hedera-${result.consensus_timestamp}`,
-        source: "hedera",
-        type: "swap",
-        pool: String(result.contract_id || "unknown"),
-        tokenA: "HBAR",
-        tokenB: "USDC",
-        amountA: String(result.amount || "0"),
-        amountB: "0",
-        timestamp: Date.now(),
-        txHash: String(result.hash || ""),
-        rawData: result as Record<string, unknown>,
-      };
-    } catch {
-      return null;
-    }
-  }
+
 
   private parseUnichainLog(
     log: Record<string, unknown>

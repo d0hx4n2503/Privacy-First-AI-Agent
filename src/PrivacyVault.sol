@@ -7,7 +7,7 @@ pragma solidity ^0.8.20;
  *         In private mode: only the commitment hash is stored on-chain.
  *         In public mode: the full strategy URI is stored (0G Storage IPFS-like URI).
  *
- * Deployed on Hedera Testnet (EVM) and 0G Chain.
+ * Deployed on 0G Chain.
  */
 contract PrivacyVault {
     struct StrategyRecord {
