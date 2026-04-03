@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { CorrelatedStory } from "../naryo/correlator";
-import { StrategyRecommendation } from "../agent/inference";
+import { StrategyRecommendation } from "../zero-g/inference";
 import axios from "axios";
 
 export interface CREWorkflowInput {

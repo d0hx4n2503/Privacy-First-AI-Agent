@@ -1,31 +1,29 @@
-# # Foundry Artifacts
-# out/
+# Foundry Artifacts
+out/
 cache/
 broadcast/
-# lib/
+lib/
 
-# # TypeScript / Node
+# TypeScript / Node
 node_modules/
-# dist/
-# *.log
-# npm-debug.log*
-# yarn-debug.log*
-# yarn-error.log*
+dist/
+*.log
+npm-debug.log*
 
-# # Environment
-# .env
-# .env.local
+# Environment
+.env
+.env.local
 
-# # IDE
-# .vscode/
-# .idea/
-# .history/
-# .DS_Store
+# IDE
+.vscode/
+.idea/
+.history/
+.DS_Store
 
-# # Temporary files
-# *.swp
-# *~
-
-# package-lock.json
-
-# /docs
+# Temporary files
+*.swp
+*~
+memory-*.json
+*.txt
+proof.json
+package-lock.json

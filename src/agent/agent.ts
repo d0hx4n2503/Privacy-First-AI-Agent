@@ -1,12 +1,13 @@
 import "dotenv/config";
-import { CorrelatedStory } from "../naryo/correlator";
-import { ZGInferenceClient, StrategyRecommendation } from "./inference";
-import { ZGRAGMemory } from "./rag";
+import { CorrelatedStory } from "../services/naryo/correlator";
+import { ZGInferenceClient, StrategyRecommendation } from "../services/zero-g/inference";
+import { ZGRAGMemory } from "../services/zero-g/storage";
 
 export interface AgentAnalysis {
   strategy: StrategyRecommendation;
   confidence: "low" | "medium" | "high";
   reasoning: string;
+  storageHash?: string;
   timestamp: number;
 }
 
@@ -51,7 +52,7 @@ export class PrivacyDeFiAgent {
     });
 
     // 3. Save this analysis to persistent memory
-    await this.memory.save({
+    const storageHash = await this.memory.save({
       timestamp: Date.now(),
       story,
       strategy,
@@ -62,6 +63,7 @@ export class PrivacyDeFiAgent {
       strategy,
       confidence: story.confidence,
       reasoning: strategy.reasoning,
+      storageHash,
       timestamp: Date.now(),
     };
 

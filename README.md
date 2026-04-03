@@ -1,119 +1,98 @@
-# 🛡️ Privacy-first AI Agent for DeFi (Hackathon Submission)
+# 🌌 ORION: Privacy-First AI Agent for Decentralized Finance
 
-An **Autonomous AI Agent** that prioritizes privacy in the DeFi ecosystem. Built for the **ETHGlobal Pragma Cannes Hackathon**.
-
-The agent automatically scans multichain liquidity pools, analyzes strategies using *Sealed Inference (TEE)*, allows users to select a **Privacy Mode**, and executes autonomous trades using **permissionless APIs** and **Agentic Micropayments**.
+**ORION** (Open Robust Intelligence & On-chain Network) is a cutting-edge AI Agent that brings **Sealed Privacy** and **Autonomous Intelligence** to DeFi trading. Built for the **0G Hackathon**, ORION leverages the 0G Labs ecosystem to ensure that high-alpha trading strategies remain confidential while executing permissionless swaps on Unichain and Ethereum.
 
 ---
 
-## 🏆 Hackathon Sponsor Targets
+## 🎨 Architecture Overview
 
-This project was built to satisfy **100% of the core requirements** for the following bounties:
+```mermaid
+graph TD
+    subgraph "Data Discovery Layer (Naryo)"
+        L["Multichain Listener"] --> C["Event Correlator"]
+    end
 
-1. **0G ($15k)**: Best OpenClaw Agent / Best DeFi App — Uses *OpenClaw* framework, *0G Compute (Sealed Inference)*, *0G Storage (RAG Memory)*, and mints agents as *ERC-7857 iNFTs*.
-2. **Chainlink ($5k)**: Best workflow with CRE — Orchestrates the entire flow via *Chainlink Runtime Environment (TypeScript SDK)*.
-3. **Uniswap ($10k)**: Best Uniswap API Integration — Executes real on-chain trades and optimal routing using the *Uniswap API*.
-4. **ioBuilders / Naryo ($3.5k)**: Naryo Builder Challenge — Exhaustive event correlation across *Unichain*.
+    subgraph "Privacy-First AI Layer (0G Labs)"
+        C --> SI["0G Compute (Sealed Inference/TEE)"]
+        SI --> RAG["0G Storage (Persistent RAG Memory)"]
+    end
 
----
+    subgraph "Trustless Execution Layer"
+        SI --> CL["Chainlink CRE Workflow"]
+        CL --> SC["Smart Contract Suite (Foundry)"]
+        SC --> UNI["Uniswap V3 (Trade/LP)"]
+    end
 
-## 🏗️ Architecture
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                       USER INTERFACE (CLI)                      │
-│                   Privacy Toggle: [Yes] / [No]                  │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                    Chainlink CRE Workflow (Orchestrator)
-                             │
-         ┌───────────────────┼───────────────────┐
-         ▼                   ▼                   ▼
-  ┌─────────────┐   ┌─────────────────┐   ┌─────────────────┐
-  │   Naryo     │   │  0G Compute     │   │  Uniswap API    │
-  │ Multichain  │──▶│ (OpenClaw Agent │──▶│  (Swap / Route) │
-  │  Listener   │   │  + Sealed TEE)  │   │                 │
-  └─────────────┘   └────────┬────────┘   └────────┬────────┘
-                             │                     │
-                    ┌────────┴────────┐
-                    │   0G Storage    │
-                    │  (RAG Memory)   │
-                    └─────────────────┘
-```
-
-### Flow Breakdown
-1. **Event**: Naryo correlates events from Unichain into a "market story".
-2. **AI Inference**: OpenClaw agent prompts 0G Compute (Sealed TEE) with RAG context from 0G Storage.
-3. **Privacy Toggle**: User decides whether to execute the strategy privately or publicly.
-4. **Execution**: Chainlink CRE workflow coordinates the Uniswap API trade.
-
----
-
-## 🔐 The Privacy Toggle
-
-The core differentiator of this agent is the user-selectable **Privacy Mode**:
-
-- **If YES (Private)**:
-  - 0G Compute processes inference entirely inside a TEE (Sealed environment).
-  - No public audit log is emitted.
-  - Only an encrypted hash is stored in the `PrivacyVault.sol` contract.
-- **If NO (Public)**:
-  - An immutable logic trail is recorded on a public ledger.
-  - The strategy is saved fully to 0G Storage for public reference.
-
----
-
-## 🚀 Setup & Run (Local Demo)
-
-### 1. Install Dependencies
-```bash
-npm install
-```
-
-### 2. Environment Variables
-Copy the template and fill in your Testnet keys:
-```bash
-cp .env.example .env
-```
-_Note: To run the real execution flow, you need a 0G Private Key, and a Uniswap API key._
-
-### 3. Dry-Run (Demo Mode)
-If you don't have all API keys configured, you can run the full flow in simulated `DRY-RUN` mode. This mocks the network responses while exercising the entire local orchestration codebase.
-
-```bash
-npm run demo
-```
-
-### 4. Real Execution (Mainsnet/Testnet)
-```bash
-npm run start
+    SC --> GChain["0G Chain (Registry & iNFT)"]
+    UNI --> FB["Real-time Execution Proofs"]
+    FB --> RAG
 ```
 
 ---
 
-## 📜 Smart Contracts
+## 🏛️ Smart Contract Suite
 
-Contracts are deployed on **0G Testnet**.
+The system's on-chain integrity is anchored by a set of Solidity contracts (Foundry-native):
 
-- **AgentRegistry.sol**: Maps Agent IDs to on-chain EVs addresses and 0G iNFT tokens.
-- **PrivacyVault.sol**: Stores strategy commitments (hashed in private mode, clear in public mode).
-
-*Deployment addresses will be added here prior to hackathon submission deadline.*
-
-### To Deploy Yourself:
-```bash
-npx hardhat run contracts/deploy.ts --network zerog-testnet
-```
+- **AgentRegistry.sol**: Manages the decentralized directory of AI agents and their privacy settings.
+- **INFT.sol**: Implements ERC-7857 for agent ownership and metadata composability.
+- **PrivacyVault.sol**: Handles shielded capital routing for private trade execution.
+- **StrategyVault.sol**: Persists AI-generated strategies with cross-chain verifiable proofs.
 
 ---
 
-## 📹 Hackathon Videos
+## 🛡️ Hackathon Module Integrations
 
-*(Placeholders for submission videos)*
-- **[Video 1: OpenClaw + 0G + Privacy + Uniswap + CRE](#)** (≤ 3 mins)
+ORION is a complete end-to-end integration of the following sponsor modules:
 
-### ✅ Uniswap Developer Feedback Form
-Completed: Yes
+### 1. 🧊 0G Compute (Sealed Inference)
+All investment reasoning is executed within **Trusted Execution Environments (TEEs)** via 0G Compute. This protects the agent's "Alpha" from front-runners and centralized surveillance.
+
+### 2. 🗄️ 0G Storage (Decentralized RAG)
+ORION persists its analytical memory and historical decisions on the **0G Storage Network**. This allows for Retrieval-Augmented Generation (RAG) that is geographically distributed and tamper-proof.
+
+### 3. 🦄 Uniswap V3 (Liquidity Manager)
+Autonomous pool discovery, liquidity provision (LPing), and intelligent routing are handled natively through the Uniswap V3 SDK on **Unichain Sepolia**.
+
+### 4. 🔗 Chainlink CRE (Workflow Orchestration)
+The **Chainlink Custom Runtime Environment (CRE)** orchestrates the handoff between AI analysis and on-chain execution, ensuring data integrity at every step.
 
 ---
-*Built with ❤️ for the Agentic Economy at Pragma Cannes 2026.*
+
+## 🚀 Quick Start (Demo Mode)
+
+To witness the agent's full potential without spending real testnet tokens:
+
+1.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
+2.  **Follow the [A-Z Setup Guide](GUIDE.md#️-environment--system-setup-a-z)** to configure your `.env`.
+3.  **Run the dry-run Pool Screener**:
+    ```bash
+    npx ts-node src/cli.ts analyze-pools --file examples/pools.json --dry-run
+    ```
+
+---
+
+## 🕹️ CLI Command Reference
+
+ORION comes with a powerful command suite:
+
+| Command | Description |
+| :--- | :--- |
+| `analyze` / `analyze-pools` | 0G AI comparative analysis of multiple liquidity pools. |
+| `start` | Professional live mode listening for real swap events. |
+| `balance` | View wallet assets (ETH, USDC) and Uniswap V3 LP NFTs. |
+| `withdraw-pool` | Exit any LP position by ID and collect all fees. |
+| `mint-inft` | Register the agent's soul as an ERC-7857 iNFT on 0G Chain. |
+
+---
+
+## 🔧 Self-Healing Reliability
+
+ORION is designed for the real world. If the 0G Galileo Testnet experiences high load (503 errors), the agent **automatically self-heals** by switching to a **Local Sealed Strategy Engine**, ensuring that your liquidiy management never goes offline.
+
+---
+
+**Developed for the 0G Hackathon | Decentralized AI Era.**

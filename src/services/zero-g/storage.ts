@@ -22,22 +22,22 @@ export class ZGRAGMemory {
   private evmRpc: string;
   private indexerRpc: string;
   private readonly dryRun: boolean;
-  private localCache: MemoryEntry[] = []; 
-  
+  private localCache: MemoryEntry[] = [];
+
   private provider: ethers.JsonRpcProvider;
   private signer: ethers.Wallet;
   private indexer: any;
 
   constructor() {
-    // Use verified Galileo Testnet Indexer RPC
-    this.indexerRpc = "https://indexer-storage-testnet-standard.0g.ai";
+    // 0G Galileo Testnet Configuration
+    this.indexerRpc = process.env.ZG_INDEXER_URL || "https://rpc.ankr.com/eth_sepolia";
     this.evmRpc = process.env.ZG_RPC_URL || "https://evmrpc-testnet.0g.ai";
     this.dryRun = process.env.DRY_RUN === "true";
 
     this.provider = new ethers.JsonRpcProvider(this.evmRpc);
     const privateKey = process.env.ZG_PRIVATE_KEY || "";
     this.signer = new ethers.Wallet(privateKey, this.provider);
-    
+
     this.indexer = new Indexer(this.indexerRpc);
   }
 
@@ -58,31 +58,31 @@ export class ZGRAGMemory {
 
     try {
       await fs.writeFile(tempPath, JSON.stringify(entry));
-      
+
       file = await ZgFile.fromFilePath(tempPath);
       const [tree, treeErr] = await file.merkleTree();
-      
+
       if (treeErr) throw new Error(`Merkle Tree computation failed: ${treeErr}`);
-      
+
       const rootHash = tree?.rootHash();
       console.log(`📀 [0G Storage] File Root Hash generated: ${rootHash}`);
-      
+
       // Execute 0G Network Storage Transaction
       // We explicitly bypass the .env ZG_STORAGE_URL if it's the non-indexer variant
       const [tx, uploadErr] = await this.indexer.upload(file, this.evmRpc, this.signer);
-      
+
       if (uploadErr) throw new Error(uploadErr);
-      
+
       console.log(`✅ [0G Storage] Memory successfully broadcast to Storage Indexer! TX: ${tx}`);
       console.log(`   Explorer: https://chainscan-galileo.0g.ai/tx/${tx}`);
       return rootHash || tx;
-      
+
     } catch (error: any) {
       console.warn("⚠️  [0G Storage] Network failed:", error.message);
       return `local-${entry.timestamp}`;
     } finally {
       if (file) await file.close();
-      await fs.unlink(tempPath).catch(() => {});
+      await fs.unlink(tempPath).catch(() => { });
     }
   }
 
@@ -106,7 +106,7 @@ export class ZGRAGMemory {
             entry.strategy.action.toLowerCase().includes(t)
         )
       )
-      .slice(-5); 
+      .slice(-5);
 
     if (relevant.length === 0 && this.localCache.length > 0) {
       return this.localCache.slice(-3).map((h) => this.formatMemory(h));

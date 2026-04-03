@@ -220,7 +220,7 @@ Respond STRICTLY in valid JSON format (no markdown, no explanation outside JSON)
       summary:
         `[LOCAL FALLBACK] Analyzed ${pools.length} pools using rule-based heuristics ` +
         `(0G Compute offline). Top pick: ${rankings[0].poolName} ` +
-        `with Vol/TVL ratio of ${((rankings[0] as any).pool?.volume24h ?? 0) / ((rankings[0] as any).pool?.tvl ?? 1)}.`,
+        `with calculated AI confidence of ${rankings[0].confidenceScore}/100.`,
       bestPool: rankings[0],
       usedFallback: true,
     };

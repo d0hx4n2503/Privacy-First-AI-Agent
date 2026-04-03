@@ -1,6 +1,6 @@
 import { PoolCandidate } from "./screener";
-import { StrategyRecommendation } from "../agent/inference";
-import { RouteQuote } from "../uniswap/router";
+import { StrategyRecommendation } from "../zero-g/inference";
+import { RouteQuote } from "./router";
 
 export interface PoolScore {
   pool: PoolCandidate;

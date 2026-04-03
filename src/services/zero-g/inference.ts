@@ -11,6 +11,7 @@ export interface StrategyRecommendation {
   riskScore: number; // 0–10 (0 = no risk, 10 = very high risk)
   reasoning: string;
   privacyRecommended: boolean;
+  isReal: boolean; // True if from the actual 0G network, False if mock/fallback
   estimatedGasCost?: string;
   expectedReturn?: string;
 }
@@ -123,6 +124,7 @@ Respond with a JSON strategy recommendation including: action, tokenIn, tokenOut
         riskScore: content.riskScore || 5,
         reasoning: content.reasoning || "AI inference result",
         privacyRecommended: content.privacyRecommended ?? true,
+        isReal: true,
       };
     } catch {
       return this.fallbackInference(input);
@@ -134,12 +136,12 @@ Respond with a JSON strategy recommendation including: action, tokenIn, tokenOut
     console.log(
       "🎭 [0G Compute] DRY-RUN: Returning mock sealed inference result"
     );
-    return this.generateStrategy(input);
+    return { ...this.generateStrategy(input), isReal: false };
   }
 
   private fallbackInference(input: InferenceInput): StrategyRecommendation {
     console.log("🔄 [OpenClaw] 0G Compute restricted — switching to Local TEE Strategy Engine");
-    return this.generateStrategy(input);
+    return { ...this.generateStrategy(input), isReal: false };
   }
 
   private generateStrategy(
@@ -201,6 +203,7 @@ Respond with a JSON strategy recommendation including: action, tokenIn, tokenOut
       riskScore,
       reasoning,
       privacyRecommended: riskScore < 5,
+      isReal: true, // Internal default for generator, but overridden by callers above
       estimatedGasCost: "0.001 ETH",
       expectedReturn: action === "swap" ? `+${alphaReturn}%` : "0%",
     };

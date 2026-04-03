@@ -1,12 +1,12 @@
-import { NaryoListener } from "./naryo/listener";
-import { EventCorrelator } from "./naryo/correlator";
-import { PrivacyDeFiAgent } from "./agent/openclaw";
+import { NaryoListener } from "../services/naryo/listener";
+import { EventCorrelator } from "../services/naryo/correlator";
+import { PrivacyDeFiAgent } from "../agent/agent";
 import { PrivacyManager } from "./privacy";
-import { CREOrchestratorWorkflow, CREWorkflowInput } from "./chainlink/workflow";
-import { UniswapRouter } from "./uniswap/router";
-import { UniswapExec } from "./uniswap/swap";
-import { LiquidityManager } from "./uniswap/liquidity";
-import { PoolCandidate } from "./pools/screener";
+import { CREOrchestratorWorkflow, CREWorkflowInput } from "../services/chainlink/workflow";
+import { UniswapRouter } from "../services/uniswap/router";
+import { UniswapExec } from "../services/uniswap/swap";
+import { LiquidityManager } from "../services/uniswap/liquidity";
+import { PoolCandidate } from "../services/uniswap/screener";
 
 import chalk from "chalk";
 
@@ -212,7 +212,7 @@ export class Orchestrator {
         slippagePercent: analysis.strategy.slippage
       });
       
-      this.logSuccess("Swap", swapRes.txHash);
+      this.logSuccess("Swap", swapRes.txHash, analysis);
     } else if (analysis.strategy.action === "provide_liquidity") {
       // For LP, we use both tokens in 50/50 ratio (approx)
       const lpRes = await this.lp.mintPosition({
@@ -223,14 +223,14 @@ export class Orchestrator {
         fee: 3000
       });
       
-      this.logSuccess("Liquidity Provision", lpRes.txHash);
+      this.logSuccess("Liquidity Provision", lpRes.txHash, analysis);
     } else if (analysis.strategy.action === "withdraw") {
       // For withdrawal, we need a tokenId. 
       // In this demo flow, we try to withdraw a default or provided ID.
       const tokenId = (story as any).tokenId || "404"; 
       const lpRes = await this.lp.withdrawPosition(tokenId);
       
-      this.logSuccess("Liquidity Withdrawal", lpRes.txHash);
+      this.logSuccess("Liquidity Withdrawal", lpRes.txHash, analysis);
     }
 
     if (autoPrompt) {
@@ -238,15 +238,27 @@ export class Orchestrator {
     }
   }
 
-  private logSuccess(type: string, txHash: string) {
+  private logSuccess(type: string, txHash: string, analysis?: any) {
     console.log(`\n🎉 [Orchestrator] ${type} successfully completed end-to-end!`);
     console.log(chalk.green(`   🏆 Requirements Satisfied:`));
-    console.log(chalk.cyan(`      - [0G Labs] Decentralized RAG Memory & Sealed Inference Fallback`));
+    
+    const computeStatus = analysis?.strategy?.isReal ? chalk.cyan("VERIFIED (TEE)") : chalk.yellow("LOCAL FALLBACK");
+    const storageStatus = (analysis?.storageHash && !analysis.storageHash.startsWith("local-")) 
+      ? chalk.cyan(`FINALIZED (${analysis.storageHash.slice(0, 10)}...)`) 
+      : chalk.yellow("OFFLINE/LOCAL");
+
+    console.log(chalk.cyan(`      - [0G Compute] Sealed Inference: ${computeStatus}`));
+    console.log(chalk.cyan(`      - [0G Storage] RAG Memory Proof: ${storageStatus}`));
     console.log(chalk.cyan(`      - [Uniswap] Real On-chain Token Transfers (Sepolia)`));
     console.log(chalk.cyan(`      - [Chainlink] CRE Workflow Orchestration`));
 
     console.log(chalk.yellow(`\n🔍 FINAL VERIFICATION LINKS:`));
     console.log(`   - Uniswap (Sepolia): https://sepolia.etherscan.io/tx/${txHash}`);
-    console.log(`   - 0G Storage (Root): https://chainscan-galileo.0g.ai/ (Proof: SUCCESS)`);
+    
+    if (analysis?.storageHash && !analysis.storageHash.startsWith("local-")) {
+      console.log(`   - 0G Storage (Root): https://chainscan-galileo.0g.ai/tx/${analysis.storageHash}`);
+    } else {
+      console.log(`   - 0G Storage (Root): [Network Offline - Data saved locally]`);
+    }
   }
 }

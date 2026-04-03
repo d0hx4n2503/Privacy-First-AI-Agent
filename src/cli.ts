@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import "dotenv/config";
 import { Command } from "commander";
-import { Orchestrator } from "./orchestrator";
-import { iNFTMinter, iNFTMetadata } from "./agent/inft";
-import { PoolScreener } from "./pools/screener";
-import { PoolReporter } from "./pools/reporter";
+import { Orchestrator } from "./core/orchestrator";
+import { iNFTMinter, iNFTMetadata } from "./services/zero-g/inft";
+import { PoolScreener } from "./services/uniswap/screener";
+import { PoolReporter } from "./services/uniswap/reporter";
 import chalk from "chalk";
 import readlineSync from "readline-sync";
 
@@ -90,6 +90,7 @@ program
 // ── Command: ANALYZE POOLS ───────────────────────────────────────────
 program
   .command("analyze-pools")
+  .alias("analyze")
   .description("Send a pool list to 0G AI for comparative ranking — picks the best pool to invest in")
   .requiredOption("--file <path>", "Path to pool candidates JSON file (see examples/pools.json)")
   .option("--top <n>", "Show top N pools in results table", "5")
@@ -207,11 +208,13 @@ program
 
     try {
       const orchestrator = new Orchestrator();
-      // We trigger a manual story that forces a withdrawal action
-      // Or just call the liquidity manager directly through the orchestrator's ref
-      // To keep it simple and consistent with the pipeline:
-      await (orchestrator as any).lp.withdrawPosition(tokenId);
-      console.log(chalk.green(`\n✅ [CLI] Withdrawal of #${tokenId} successful.`));
+      const result = await (orchestrator as any).lp.withdrawPosition(tokenId);
+      
+      if (result && result.status === "success") {
+        console.log(chalk.green(`\n✅ [CLI] Withdrawal of #${tokenId} successful.`));
+      } else {
+        process.exit(1);
+      }
     } catch (error: any) {
       console.error(chalk.red(`\n❌ [CLI] Withdrawal failed:`), error.message || error);
       process.exit(1);
@@ -219,7 +222,46 @@ program
 
     process.exit(0);
   });
+// ── Command: BALANCE ────────────────────────────────────────────────
+program
+  .command("balance")
+  .description("Check wallet balances (ETH, USDC) and Uniswap V3 positions")
+  .action(async () => {
+    const { LiquidityManager } = require("./services/uniswap/liquidity");
+    const chalk = require("chalk");
+    
+    console.log(chalk.bold.cyan("\n======================================================="));
+    console.log(chalk.bold.cyan("   💰  Wallet & Liquidity Portfolio Overview"));
+    console.log(chalk.bold.cyan("=======================================================\n"));
 
+    try {
+      const lpManager = new LiquidityManager();
+      const results = await lpManager.getBalancesAndPositions();
 
+      console.log(chalk.white(`👤 Address: ${results.address}`));
+      console.log(chalk.gray("───────────────────────────────────────────────────────"));
+      console.log(chalk.green(`💵 ETH Balance  : ${results.eth} ETH`));
+      console.log(chalk.green(`💵 USDC Balance : ${results.usdc} USDC`));
+      console.log(chalk.gray("───────────────────────────────────────────────────────"));
+
+      if (results.positions.length > 0) {
+        console.log(chalk.bold.yellow("\n🖼️  Active Uniswap V3 Positions:"));
+        results.positions.forEach((pos: any) => {
+          console.log(chalk.white(`📍 ID: ${pos.tokenId}`));
+          console.log(chalk.gray(`   Tokens    : ${pos.token0.slice(0, 6)}... / ${pos.token1.slice(0, 6)}...`));
+          console.log(chalk.gray(`   Liquidity : ${pos.liquidity}`));
+          console.log(chalk.gray(`   Fee Tier  : ${Number(pos.fee) / 10000}%`));
+          console.log(chalk.gray("   ─────────"));
+        });
+      } else {
+        console.log(chalk.gray("\n📭 No active Uniswap V3 positions found."));
+      }
+
+    } catch (error: any) {
+      console.error(chalk.red("\n❌ Failed to fetch balance:"), error.message || error);
+    }
+
+    process.exit(0);
+  });
 
 program.parse();

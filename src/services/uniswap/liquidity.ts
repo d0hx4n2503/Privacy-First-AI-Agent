@@ -53,17 +53,23 @@ export class LiquidityManager {
     console.log(`🏦 [LP Manager] Providing liquidity: ${params.amountA} ${params.tokenA} + ${params.amountB} ${params.tokenB}`);
 
     try {
-      const token0Symbol = params.tokenA < params.tokenB ? params.tokenA : params.tokenB;
-      const token1Symbol = params.tokenA < params.tokenB ? params.tokenB : params.tokenA;
-      const amount0 = token0Symbol === params.tokenA ? params.amountA : params.amountB;
-      const amount1 = token1Symbol === params.tokenA ? params.amountA : params.amountB;
+      const addrA = this.ADDRESS_MAP[params.tokenA];
+      const addrB = this.ADDRESS_MAP[params.tokenB];
 
-      const token0Addr = this.ADDRESS_MAP[token0Symbol];
-      const token1Addr = this.ADDRESS_MAP[token1Symbol];
-
-      if (!token0Addr || !token1Addr) {
-        throw new Error(`Token addresses not found for ${token0Symbol}/${token1Symbol}`);
+      if (!addrA || !addrB) {
+        throw new Error(`Token addresses not found for ${params.tokenA}/${params.tokenB}`);
       }
+
+      // 🚨 Uniswap V3 requires token0 < token1 by address (alphabetical/numerical)
+      const isA0 = addrA.toLowerCase() < addrB.toLowerCase();
+      const token0Addr = isA0 ? addrA : addrB;
+      const token1Addr = isA0 ? addrB : addrA;
+      
+      const amount0 = isA0 ? params.amountA : params.amountB;
+      const amount1 = isA0 ? params.amountB : params.amountA;
+
+      const token0Symbol = isA0 ? params.tokenA : params.tokenB;
+      const token1Symbol = isA0 ? params.tokenB : params.tokenA;
 
       // 1. Approve Manager
       await this.approveToken(token0Addr, amount0);
@@ -92,8 +98,18 @@ export class LiquidityManager {
         deadline: Math.floor(Date.now() / 1000) + 60 * 10
       };
 
+      let msgValue = 0n;
+      if (token0Symbol === "ETH") {
+        msgValue = mintParams.amount0Desired;
+      } else if (token1Symbol === "ETH") {
+        msgValue = mintParams.amount1Desired;
+      }
+
       console.log("📡 [LP Manager] Broadcasting mint transaction...");
-      const tx = await manager.mint(mintParams, { gasLimit: 500000 });
+      const tx = await manager.mint(mintParams, { 
+        gasLimit: 500000, 
+        value: msgValue 
+      });
       const receipt = await tx.wait();
       console.log(`✅ [LP Manager] Liquidity provided! TX: ${tx.hash}`);
 
@@ -144,8 +160,8 @@ export class LiquidityManager {
       const collParams = {
         tokenId,
         recipient: await this.signer.getAddress(),
-        amount0Max: ethers.MaxUint256,
-        amount1Max: ethers.MaxUint256
+        amount0Max: BigInt("340282366920938463463374607431768211455"), // uint128 max
+        amount1Max: BigInt("340282366920938463463374607431768211455")
       };
       const collTx = await manager.collect(collParams);
       await collTx.wait();
@@ -155,6 +171,61 @@ export class LiquidityManager {
     } catch (error: any) {
       console.error(`❌ [LP Manager] Withdrawal failed: ${error.message}`);
       return { txHash: "", status: "failed" };
+    }
+  }
+
+  /**
+   * Fetch all relevant balances (ETH, USDC) and active Uniswap V3 positions.
+   */
+  async getBalancesAndPositions() {
+    const address = await this.signer?.getAddress();
+    if (!address) throw new Error("Signer not configured.");
+
+    const results: any = {
+      address,
+      eth: "0.0",
+      usdc: "0.0",
+      positions: []
+    };
+
+    try {
+      // 1. ETH Balance
+      const balanceWei = await this.provider.getBalance(address);
+      results.eth = ethers.formatEther(balanceWei);
+
+      // 2. USDC Balance
+      const usdcAddress = this.ADDRESS_MAP["USDC"];
+      const usdcAbi = ["function balanceOf(address account) external view returns (uint256)"];
+      const usdcContract = new ethers.Contract(usdcAddress, usdcAbi, this.provider);
+      const usdcBalance = await usdcContract.balanceOf(address);
+      results.usdc = ethers.formatUnits(usdcBalance, 6);
+
+      // 3. Uniswap V3 Positions
+      const positionManagerAbi = [
+        "function balanceOf(address owner) external view returns (uint256)",
+        "function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256)",
+        "function positions(uint256 tokenId) external view returns (uint96 nonce, address operator, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, uint128 tokensOwed0, uint128 tokensOwed1)"
+      ];
+      const positionManager = new ethers.Contract(this.POSITION_MANAGER, positionManagerAbi, this.provider);
+
+      const nftCount = await positionManager.balanceOf(address);
+      for (let i = 0; i < Number(nftCount); i++) {
+        const tokenId = await positionManager.tokenOfOwnerByIndex(address, i);
+        const pos = await positionManager.positions(tokenId);
+        
+        results.positions.push({
+          tokenId: tokenId.toString(),
+          token0: pos.token0,
+          token1: pos.token1,
+          liquidity: pos.liquidity.toString(),
+          fee: Number(pos.fee)
+        });
+      }
+
+      return results;
+    } catch (error: any) {
+      console.error(`❌ [LP Manager] Balance fetch failed: ${error.message}`);
+      return results;
     }
   }
 
