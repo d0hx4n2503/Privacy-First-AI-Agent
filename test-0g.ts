@@ -5,7 +5,7 @@ import * as fs from 'fs';
 
 async function run() {
   const rpc = "https://evmrpc-testnet.0g.ai";
-  const indexerRpc = "https://rpc-storage-testnet.0g.ai";
+  const indexerRpc = "https://indexer-storage-testnet-standard.0g.ai";
   const pk = "0x4d184ba8c8c15ed76d401281eee1f2c6c69a5022755f709f81bbecd4290f717c";
 
   try {

@@ -6,6 +6,7 @@ import { iNFTMinter, iNFTMetadata } from "./agent/inft";
 import { PoolScreener } from "./pools/screener";
 import { PoolReporter } from "./pools/reporter";
 import chalk from "chalk";
+import readlineSync from "readline-sync";
 
 const program = new Command();
 
@@ -129,21 +130,94 @@ program
         await reporter.exportJSON(result);
       }
 
-      // 4. Optionally auto-invest into the top-ranked pool via full pipeline
+      // 4. Interactive selection (if not auto-investing already)
+      let selectedPool = null;
+      let privacyChoice = true;
+
       if (options.autoInvest) {
-        const top = result.topPool;
-        console.log(chalk.bold.magenta(`\n🚀 [Auto-Invest] Routing top pool ${top.name} into execution pipeline...`));
-        const orchestrator = new Orchestrator();
-        await orchestrator.analyzePoolList([top], true);
+        selectedPool = result.topPool;
+        console.log(chalk.bold.magenta(`\n🚀 [Auto-Invest] Selecting top-ranked pool: ${selectedPool.name}`));
+      } else {
+        const poolCount = Math.min(result.inputPools.length, parseInt(options.top, 10));
+        console.log(chalk.bold.yellow(`\n👉 Select a pool to invest in (1-${poolCount}) or 'q' to quit:`));
+        const choice = readlineSync.question("Selection: ");
+
+        if (choice.toLowerCase() === 'q') {
+          console.log(chalk.gray("Analysis complete. No investment selected."));
+        } else {
+          const idx = parseInt(choice, 10) - 1;
+          if (idx >= 0 && idx < result.inputPools.length) {
+            // Match the pool by name in the ranked list or just use input list order?
+            // Actually, reporter.print shows the AI ranked list. 
+            // result.aiResult.rankings contains the names in order.
+            const rankedName = result.aiResult.rankings[idx].poolName;
+            selectedPool = result.inputPools.find(p => p.name === rankedName);
+          } else {
+            console.log(chalk.red("Invalid selection. skipping investment."));
+          }
+        }
       }
 
-      console.log(chalk.green("\n✅ Pool analysis complete."));
+      if (selectedPool) {
+        // 5. Ask for Privacy Mode
+        console.log(chalk.bold.cyan("\n🛡️  Select Execution Mode:"));
+        console.log(" [1] Private (Shielded via 0G + TEE) - Recommended");
+        console.log(" [2] Public  (Transparent on-chain)");
+        const mode = readlineSync.question("Choice (1/2, default 1): ");
+        privacyChoice = mode !== '2';
+
+        // 5. Select amount
+        console.log(chalk.bold.yellow(`\n💰 Enter investment amount (Default: 1.0):`));
+        const amountStr = readlineSync.question("Amount: ") || "1.0";
+        const amount = parseFloat(amountStr);
+
+        if (isNaN(amount) || amount <= 0) {
+          console.log(chalk.red("Invalid amount. skipping investment."));
+          return;
+        }
+
+        console.log(chalk.bold.magenta(`\n🚀 Routing ${selectedPool.name} into execution pipeline...`));
+        const orchestrator = new Orchestrator();
+        await orchestrator.analyzePoolList([selectedPool], true, privacyChoice, amountStr);
+      }
+
+      console.log(chalk.green("\n✅ Done."));
     } catch (error: any) {
       console.error(chalk.red("\n❌ [analyze-pools] Failed:"), error.message || error);
       process.exit(1);
     }
 
     setTimeout(() => process.exit(0), 1000);
+  });
+
+// ── Command: WITHDRAW POOL ───────────────────────────────────────────
+program
+  .command("withdraw-pool <tokenId>")
+  .description("Withdraw liquidity from a Uniswap V3 position by Token ID")
+  .option("--dry-run", "Skip real transactions", false)
+  .action(async (tokenId, options) => {
+    if (options.dryRun) {
+      process.env.DRY_RUN = "true";
+      process.env.SIMULATE = "true";
+    } else {
+      process.env.DRY_RUN = "false";
+    }
+
+    console.log(chalk.bold.yellow(`\n🏦 [CLI] Initiating withdrawal for position #${tokenId}...`));
+
+    try {
+      const orchestrator = new Orchestrator();
+      // We trigger a manual story that forces a withdrawal action
+      // Or just call the liquidity manager directly through the orchestrator's ref
+      // To keep it simple and consistent with the pipeline:
+      await (orchestrator as any).lp.withdrawPosition(tokenId);
+      console.log(chalk.green(`\n✅ [CLI] Withdrawal of #${tokenId} successful.`));
+    } catch (error: any) {
+      console.error(chalk.red(`\n❌ [CLI] Withdrawal failed:`), error.message || error);
+      process.exit(1);
+    }
+
+    process.exit(0);
   });
 
 

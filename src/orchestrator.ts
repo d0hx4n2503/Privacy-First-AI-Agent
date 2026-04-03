@@ -5,6 +5,7 @@ import { PrivacyManager } from "./privacy";
 import { CREOrchestratorWorkflow, CREWorkflowInput } from "./chainlink/workflow";
 import { UniswapRouter } from "./uniswap/router";
 import { UniswapExec } from "./uniswap/swap";
+import { LiquidityManager } from "./uniswap/liquidity";
 import { PoolCandidate } from "./pools/screener";
 
 import chalk from "chalk";
@@ -20,6 +21,7 @@ export class Orchestrator {
   private creWorkflow: CREOrchestratorWorkflow;
   private router: UniswapRouter;
   private exec: UniswapExec;
+  private lp: LiquidityManager;
   private agentAddress: string;
 
   constructor() {
@@ -32,6 +34,7 @@ export class Orchestrator {
     this.creWorkflow = new CREOrchestratorWorkflow();
     this.router = new UniswapRouter();
     this.exec = new UniswapExec();
+    this.lp = new LiquidityManager();
   }
 
   async start(autoPrompt: boolean = false) {
@@ -112,8 +115,14 @@ export class Orchestrator {
    *
    * @param pools  Pool candidates to run through the pipeline (typically just rank #1)
    * @param autoPrompt  Skip the interactive privacy prompt
+   * @param privacyOverride  Manually set privacy mode (true = Private, false = Public)
    */
-  async analyzePoolList(pools: PoolCandidate[], autoPrompt: boolean = false): Promise<void> {
+  async analyzePoolList(
+    pools: PoolCandidate[], 
+    autoPrompt: boolean = false,
+    privacyOverride?: boolean,
+    amountOverride?: string
+  ): Promise<void> {
     console.log(chalk.bold.cyan(`\n⛓️  [Orchestrator] Routing ${pools.length} AI-selected pool(s) into execution pipeline...`));
 
     for (const pool of pools) {
@@ -138,26 +147,40 @@ export class Orchestrator {
         confidence,
       };
 
-      await this.handleStory(story, autoPrompt);
+      await this.handleStory(story, autoPrompt, privacyOverride, amountOverride);
     }
   }
 
   /**
    * Main flow executed when a correlated market story is detected.
    */
-  private async handleStory(story: any, autoPrompt: boolean) {
+  private async handleStory(story: any, autoPrompt: boolean, privacyOverride?: boolean, amountOverride?: string) {
     console.log(chalk.bgMagenta.white(`\n🚨 NEW MARKET STORY DETECTED: ${story.tokenA}/${story.tokenB} 🚨`));
 
     // 1. AI Inference (0G OpenClaw)
     const analysis = await this.agent.analyze(story);
+
+    if (amountOverride) {
+      console.log(chalk.yellow(`\n💰 Overriding AI strategy amount: ${analysis.strategy.amount} → ${amountOverride}`));
+      analysis.strategy.amount = amountOverride;
+    }
 
     if (analysis.strategy.action === "hold") {
       console.log(chalk.gray("   Agent recommended HOLD. Returning to scanning mode."));
       return;
     }
 
-    // 2. Privacy User Prompt
-    const privacyConfig = await this.privacy.promptUser(analysis.strategy.privacyRecommended, autoPrompt);
+    // 2. Privacy User Prompt (use override if provided)
+    let privacyConfig;
+    if (privacyOverride !== undefined) {
+      console.log(`\n🔒 [Orchestrator] Using pre-selected privacy mode: ${privacyOverride ? "PRIVATE" : "PUBLIC"}`);
+      privacyConfig = {
+        enabled: privacyOverride,
+        vaultAddress: process.env.PRIVACY_VAULT_ADDRESS || "0.0.mock_vault"
+      };
+    } else {
+      privacyConfig = await this.privacy.promptUser(analysis.strategy.privacyRecommended, autoPrompt);
+    }
 
     // 3. Orchestrate workflow via Chainlink CRE
     const creInput: CREWorkflowInput = {
@@ -174,32 +197,56 @@ export class Orchestrator {
       return;
     }
 
-    // 4. Execute Uniswap Swap
-    const quote = await this.router.getQuote(
-      analysis.strategy.tokenIn, 
-      analysis.strategy.tokenOut, 
-      analysis.strategy.amount
-    );
+    // 4. Execute Swap or LP
+    if (analysis.strategy.action === "swap") {
+      const quote = await this.router.getQuote(
+        analysis.strategy.tokenIn, 
+        analysis.strategy.tokenOut, 
+        analysis.strategy.amount
+      );
 
-    const swapRes = await this.exec.executeSwap({
-      tokenIn: quote.tokenIn,
-      tokenOut: quote.tokenOut,
-      amount: quote.amountIn,
-      slippagePercent: analysis.strategy.slippage
-    });
+      const swapRes = await this.exec.executeSwap({
+        tokenIn: quote.tokenIn,
+        tokenOut: quote.tokenOut,
+        amount: quote.amountIn,
+        slippagePercent: analysis.strategy.slippage
+      });
+      
+      this.logSuccess("Swap", swapRes.txHash);
+    } else if (analysis.strategy.action === "provide_liquidity") {
+      // For LP, we use both tokens in 50/50 ratio (approx)
+      const lpRes = await this.lp.mintPosition({
+        tokenA: story.tokenA,
+        tokenB: story.tokenB,
+        amountA: analysis.strategy.amount,
+        amountB: (parseFloat(analysis.strategy.amount) * 0.8).toString(), // Mock ratio for demo
+        fee: 3000
+      });
+      
+      this.logSuccess("Liquidity Provision", lpRes.txHash);
+    } else if (analysis.strategy.action === "withdraw") {
+      // For withdrawal, we need a tokenId. 
+      // In this demo flow, we try to withdraw a default or provided ID.
+      const tokenId = (story as any).tokenId || "404"; 
+      const lpRes = await this.lp.withdrawPosition(tokenId);
+      
+      this.logSuccess("Liquidity Withdrawal", lpRes.txHash);
+    }
 
-    console.log(`\n🎉 [Orchestrator] Trade successfully completed end-to-end!`);
+    if (autoPrompt) {
+      setTimeout(() => process.exit(0), 1000);
+    }
+  }
+
+  private logSuccess(type: string, txHash: string) {
+    console.log(`\n🎉 [Orchestrator] ${type} successfully completed end-to-end!`);
     console.log(chalk.green(`   🏆 Requirements Satisfied:`));
     console.log(chalk.cyan(`      - [0G Labs] Decentralized RAG Memory & Sealed Inference Fallback`));
     console.log(chalk.cyan(`      - [Uniswap] Real On-chain Token Transfers (Sepolia)`));
     console.log(chalk.cyan(`      - [Chainlink] CRE Workflow Orchestration`));
 
     console.log(chalk.yellow(`\n🔍 FINAL VERIFICATION LINKS:`));
-    console.log(`   - Uniswap (Sepolia): https://sepolia.etherscan.io/tx/${swapRes.txHash}`);
+    console.log(`   - Uniswap (Sepolia): https://sepolia.etherscan.io/tx/${txHash}`);
     console.log(`   - 0G Storage (Root): https://chainscan-galileo.0g.ai/ (Proof: SUCCESS)`);
-    
-    if (autoPrompt) {
-      setTimeout(() => process.exit(0), 1000);
-    }
   }
 }

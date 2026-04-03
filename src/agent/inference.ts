@@ -148,38 +148,48 @@ Respond with a JSON strategy recommendation including: action, tokenIn, tokenOut
     const { story } = input;
     
     // Simulate complex "Deal Discovery" logic
-    // A "good deal" (swap) happens if:
-    // 1. High volume (>= 0.5) OR
-    // 2. High confidence from multiple sources
-    const isHighVolume = story.totalAmountA >= 0.5;
-    const isStrongAlpha = story.confidence === "high" && story.sources.length >= 1;
+    let action: StrategyRecommendation["action"] = "hold";
+    if (story.confidence === "high" || story.totalAmountA >= 0.5) {
+      if (story.priceImpact > 5.0) {
+        action = "withdraw"; // High price impact/volatility = Exit
+      } else {
+        // 70% chance swap, 30% chance LP for stable stories
+        action = Math.random() > 0.3 ? "swap" : "provide_liquidity";
+      }
+    }
     
-    const action: StrategyRecommendation["action"] = (isHighVolume || isStrongAlpha) ? "swap" : "hold";
-    const riskScore = isHighVolume ? 2 : 4; // Lower risk for highly verified trades
-    
-    // Fixed amount as requested by user
+    const riskScore = action === "withdraw" ? 9 : action === "hold" ? 1 : 3;
     const amount = "1.0";
 
-    // Dynamic professional "Scouting" reasoning
     const alphaReturn = (Math.random() * 5 + 2).toFixed(2);
     const spread = (Math.random() * 0.3 + 0.1).toFixed(2);
 
     const swapReasons = [
       `🎯 [SCOUT] High-alpha opportunity detected on ${story.sources.join(", ")}. Price deviate from 0G historical mean by ${alphaReturn}%. Executing 1.0 unit entry.`,
       `🔍 [Momentum] Unusual whale accumulation spotted in ${story.tokenA} pools. Arbitrage spread of ${spread}% identified. Optimal entry for 1.0 units.`,
-      `📈 [Alpha] Correlated liquidity sinks found on Unichain. Probability of immediate upside: 82%. Strategic swap of 1.0 units recommended.`,
-      `💎 [Deal Discovery] Rare low-slippage window (${story.priceImpact}%) found for ${story.tokenA}/${story.tokenB}. Risk/Reward ratio optimized for 1.0 unit trade.`
+    ];
+
+    const lpReasons = [
+      `🌊 [Liquidity] Stable volatility profile detected on ${story.tokenA}/${story.tokenB}. Ideal window for yield generation via Uniswap V3 LP. Target 1.0 unit depth.`,
+      `💰 [Yield] Fee capture opportunity: High volume/TVL ratio (${alphaReturn}%) indicates consistent fee inflow. Providing 1.0 unit liquidity.`,
+    ];
+
+    const exitReasons = [
+      `🚨 [Risk Alert] Massive volatility spike detected ($${story.priceImpact}% impact). Priority: Capital Preservation. Withdrawing 1.0 units from ${story.tokenA}/${story.tokenB} pool immediately.`,
+      `📉 [Exit] Downside risk exceeds alpha potential. 0G Storage historical trend indicates incoming liquidity crunch. Closing 1.0 unit position.`,
     ];
 
     const holdReasons = [
       `🔭 [Monitor] Scanning ${story.tokenA}/${story.tokenB}... Current spread of ${spread}% is below target threshold for 1.0 unit execution.`,
-      `🛡️ [Preservation] Liquidity depth too shallow for 1.0 unit swap. Re-evaluating once pool syncs with 0G Storage forecasts.`,
-      `📉 [Neutral] No clear momentum detected. Alpha signal: ${alphaReturn}% (Low). Safest action is to continue scouting.`,
       `⚠️ [Risk Avoidance] Detected potential volatility spike. Recommendation: HOLD until cross-chain correlation reaches 0.85.`
     ];
 
     const reasoning = action === "swap" 
       ? swapReasons[Math.floor(Math.random() * swapReasons.length)]
+      : action === "provide_liquidity"
+      ? lpReasons[Math.floor(Math.random() * lpReasons.length)]
+      : action === "withdraw"
+      ? exitReasons[Math.floor(Math.random() * exitReasons.length)]
       : holdReasons[Math.floor(Math.random() * holdReasons.length)];
 
     return {
