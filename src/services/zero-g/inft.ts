@@ -1,5 +1,7 @@
 import "dotenv/config";
 import { ethers } from "ethers";
+import * as fs from "fs";
+import * as path from "path";
 
 export interface iNFTMetadata {
   agentId: string;
@@ -100,9 +102,48 @@ export class iNFTMinter {
 
       console.log(`✅ [iNFT] Minted! Token ID: ${tokenId}`);
       console.log(`   TX: ${receipt.hash}`);
-      console.log(
-        `   Explorer: https://chainscan-galileo.0g.ai/tx/${receipt.hash}`
-      );
+
+      // ─────────────────────────────────────────────────────────────
+      // NEW: Register Agent on the AgentRegistry contract
+      // ─────────────────────────────────────────────────────────────
+      try {
+        console.log("📝 [iNFT] Registering agent on AgentRegistry...");
+        const registryAbi = ["function registerAgent(string calldata inftTokenId, string calldata metadata, bool privacyEnabled) external"];
+        const registry = new ethers.Contract(process.env.AGENT_REGISTRY_ADDRESS!, registryAbi, this.signer);
+        
+        const regTx = await registry.registerAgent(
+          tokenId, 
+          metadata.storageUri || "0G_AI_AGENT", 
+          true // privacyEnabled by default
+        );
+        await regTx.wait();
+        console.log(`✅ [iNFT] Registered on-chain! Registry TX: ${regTx.hash}`);
+      } catch (regErr) {
+        console.warn("⚠️  [iNFT] On-chain registration failed (might be already registered):", (regErr as Error).message);
+      }
+
+      // Auto-update .env with the new identity
+      try {
+        const envPath = path.resolve(process.cwd(), ".env");
+        let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
+        
+        const updateEnv = (key: string, value: string) => {
+          const regex = new RegExp(`^${key}=.*`, "m");
+          if (regex.test(envContent)) {
+            envContent = envContent.replace(regex, `${key}=${value}`);
+          } else {
+            envContent += `\n${key}=${value}`;
+          }
+        };
+
+        updateEnv("MY_AGENT_INFT_ID", tokenId);
+        updateEnv("AGENT_ADDRESS", ownerAddress);
+        
+        fs.writeFileSync(envPath, envContent.trim() + "\n");
+        console.log(`📝 [iNFT] Identity saved to .env (ID: ${tokenId}, Address: ${ownerAddress})`);
+      } catch (err) {
+        console.warn("⚠️  [iNFT] Could not auto-update .env:", (err as Error).message);
+      }
 
       return result;
     } catch (error) {

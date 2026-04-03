@@ -194,6 +194,7 @@ program
 // ── Command: WITHDRAW POOL ───────────────────────────────────────────
 program
   .command("withdraw-pool <tokenId>")
+  .alias("withdraw")
   .description("Withdraw liquidity from a Uniswap V3 position by Token ID")
   .option("--dry-run", "Skip real transactions", false)
   .action(async (tokenId, options) => {
@@ -204,11 +205,9 @@ program
       process.env.DRY_RUN = "false";
     }
 
-    console.log(chalk.bold.yellow(`\n🏦 [CLI] Initiating withdrawal for position #${tokenId}...`));
-
     try {
       const orchestrator = new Orchestrator();
-      const result = await (orchestrator as any).lp.withdrawPosition(tokenId);
+      const result = await orchestrator.withdraw(tokenId);
       
       if (result && result.status === "success") {
         console.log(chalk.green(`\n✅ [CLI] Withdrawal of #${tokenId} successful.`));

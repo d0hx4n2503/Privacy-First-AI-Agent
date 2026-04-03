@@ -1,3 +1,4 @@
+import { ethers } from "ethers";
 import { NaryoListener } from "../services/naryo/listener";
 import { EventCorrelator } from "../services/naryo/correlator";
 import { PrivacyDeFiAgent } from "../agent/agent";
@@ -35,6 +36,32 @@ export class Orchestrator {
     this.router = new UniswapRouter();
     this.exec = new UniswapExec();
     this.lp = new LiquidityManager();
+    this.agentAddress = process.env.AGENT_ADDRESS || "0x00000000";
+  }
+
+  /**
+   * Post a proof of action to the 0G Chain AgentRegistry.
+   */
+  private async logOnChainAction(type: string, dataHash: string) {
+    if (process.env.DRY_RUN === "true") return;
+
+    try {
+      const provider = new ethers.JsonRpcProvider(process.env.ZG_RPC_URL);
+      const wallet = new ethers.Wallet(process.env.ZG_PRIVATE_KEY!, provider);
+      const registry = new ethers.Contract(
+        process.env.AGENT_REGISTRY_ADDRESS!,
+        ["function logAction(string calldata actionType, string calldata dataHash) external"],
+        wallet
+      );
+
+      console.log(`📡 [0G Registry] Attesting action proof: ${type}...`);
+      const tx = await registry.logAction(type, dataHash);
+      await tx.wait();
+      console.log(`✅ [0G Registry] Proof on-chain: ${tx.hash}`);
+      console.log(`   🔗 Explorer: https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
+    } catch (error: any) {
+      console.warn(`⚠️  [0G Registry] Attestation failed: ${error.message}`);
+    }
   }
 
   async start(autoPrompt: boolean = false) {
@@ -152,6 +179,19 @@ export class Orchestrator {
   }
 
   /**
+   * Withdraw liquidity from a position with on-chain attestation.
+   */
+  async withdraw(tokenId: string): Promise<any> {
+    console.log(chalk.bold.yellow(`\n🏦 [Orchestrator] Initiating verifiable withdrawal for position #${tokenId}...`));
+    
+    // 1. Attest the decision on-chain
+    await this.logOnChainAction("WITHDRAW_STRATEGY", `withdraw-pos-${tokenId}-${Date.now()}`);
+    
+    // 2. Execute the withdrawal
+    return await this.lp.withdrawPosition(tokenId);
+  }
+
+  /**
    * Main flow executed when a correlated market story is detected.
    */
   private async handleStory(story: any, autoPrompt: boolean, privacyOverride?: boolean, amountOverride?: string) {
@@ -159,6 +199,11 @@ export class Orchestrator {
 
     // 1. AI Inference (0G OpenClaw)
     const analysis = await this.agent.analyze(story);
+
+    // 1.5. Post proof to 0G Chain Agent Registry
+    if (analysis.storageHash) {
+      await this.logOnChainAction(`${analysis.strategy.action.toUpperCase()}_STRATEGY`, analysis.storageHash);
+    }
 
     if (amountOverride) {
       console.log(chalk.yellow(`\n💰 Overriding AI strategy amount: ${analysis.strategy.amount} → ${amountOverride}`));

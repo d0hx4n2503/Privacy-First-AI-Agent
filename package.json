@@ -7,12 +7,15 @@
     "build": "tsc",
     "start": "ts-node src/cli.ts start",
     "demo": "ts-node src/cli.ts demo",
-    "trigger-test": "ts-node src/cli.ts trigger-test",
     "mint-inft": "ts-node src/cli.ts mint-inft",
-    "register-agent": "ts-node src/cli.ts register-agent",
+    "run-agent": "ts-node tools/run-agent.ts",
+    "verify": "ts-node tools/verify-onchain.ts",
+    "check-id": "ts-node tools/check-identity.ts",
+    "withdraw": "ts-node src/cli.ts withdraw",
+    "balance": "ts-node src/cli.ts balance",
     "test": "jest --passWithNoTests",
     "compile": "forge build",
-    "deploy:0g": "forge script script/Deploy.s.sol --rpc-url zerog-testnet --broadcast --verify",
+    "deploy:0g": "wsl bash deploy.sh",
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {

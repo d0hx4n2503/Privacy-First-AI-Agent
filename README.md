@@ -1,98 +1,78 @@
-# 🌌 ORION: Privacy-First AI Agent for Decentralized Finance
+# 🌌 ORION: Sovereign Privacy-First AI Agent for Decentralized Finance
 
-**ORION** (Open Robust Intelligence & On-chain Network) is a cutting-edge AI Agent that brings **Sealed Privacy** and **Autonomous Intelligence** to DeFi trading. Built for the **0G Hackathon**, ORION leverages the 0G Labs ecosystem to ensure that high-alpha trading strategies remain confidential while executing permissionless swaps on Unichain and Ethereum.
+**ORION** (Open Robust Intelligence & On-chain Network) is a cutting-edge autonomous AI Agent that bridges the gap between **Sealed Privacy** and **Institutional-Grade DeFi Execution**. 
+
+Built for the **0G Hackathon**, ORION leverages the full power of the 0G Labs ecosystem to ensure that sophisticated trading strategies remain confidential while executing verifiable, non-custodial swaps and liquidity management.
 
 ---
 
-## 🎨 Architecture Overview
+## 🏗️ Project Architecture & Directory Map
 
-```mermaid
-graph TD
-    subgraph "Data Discovery Layer (Naryo)"
-        L["Multichain Listener"] --> C["Event Correlator"]
-    end
+Our codebase is meticulously organized into a 4-layered modular architecture:
 
-    subgraph "Privacy-First AI Layer (0G Labs)"
-        C --> SI["0G Compute (Sealed Inference/TEE)"]
-        SI --> RAG["0G Storage (Persistent RAG Memory)"]
-    end
+### 1. 🧠 Core Orchestration (`/src/core`)
+- **`orchestrator.ts`**: The central brain. Tying together Data discovery, AI reasoning, and On-chain execution.
+- **`privacy.ts`**: Manages the TEE-shielded user-approval flow.
 
-    subgraph "Trustless Execution Layer"
-        SI --> CL["Chainlink CRE Workflow"]
-        CL --> SC["Smart Contract Suite (Foundry)"]
-        SC --> UNI["Uniswap V3 (Trade/LP)"]
-    end
+### 2. 🧊 Sponsor Module Integrations (`/src/services`)
+- **`zero-g/`**: 
+    - `inft.ts`: Logic for ERC-7857 iNFT minting & registration.
+    - `inference.ts`: 0G Compute (Sealed TEE Inference) client.
+    - `storage.ts`: 0G Storage (Decentralized RAG) client.
+- **`uniswap/`**:
+    - `liquidity.ts`: Uniswap V3 LP Position management.
+    - `swap.ts`: High-performance trade execution.
+    - `router.ts`: Intelligent path discovery.
+- **`chainlink/`**:
+    - `workflow.ts`: CRE Workflow orchestration and verification.
+- **`naryo/`**:
+    - `listener.ts`: Cross-chain swap event discovery (Unichain/Ethereum).
 
-    SC --> GChain["0G Chain (Registry & iNFT)"]
-    UNI --> FB["Real-time Execution Proofs"]
-    FB --> RAG
+### 3. 🤖 ACP AI Agent (`/src/agent`)
+- **`agent.ts`**: The OpenClaw-compatible AI persona. Interprets market stories and generates strategies.
+
+### 4. ⛓️ Smart Contract Suite (`/src` - Solidity)
+- **`AgentRegistry.sol`**: On-chain verified registry for Agent IDs and Action Logs.
+- **`PrivacyVault.sol`**: Private liquidity router for shielded transactions.
+
+---
+
+## 🛡️ Triple Proof Verification Standard
+
+1.  **Proof of Reasoning**: Every strategy is signed within a TEE (**0G Compute**).
+2.  **Proof of Existence**: Finalized strategies are hashed and committed to **0G Storage** *before* execution.
+3.  **Proof of Identity**: Every on-chain trade is attested in the **0G AgentRegistry**, linking the transaction to the specific Agent ID (iNFT).
+
+---
+
+## 🚀 Quick Launch (Real Autonomous Mode)
+
+```bash
+# 1. Deploy the Sovereign Infrastructure (WSL/Linux)
+npm run deploy:0g
+
+# 2. Mint the Agent's Soul (ERC-7857 iNFT)
+npm run mint-inft
+
+# 3. Launch the Sovereign Investment Session
+npm run run-agent
+
+# 4. Auditor Check: Verify Action Proofs on-chain
+npm run verify
 ```
 
 ---
 
-## 🏛️ Smart Contract Suite
+## 🕹️ CLI Operational Suite
 
-The system's on-chain integrity is anchored by a set of Solidity contracts (Foundry-native):
-
-- **AgentRegistry.sol**: Manages the decentralized directory of AI agents and their privacy settings.
-- **INFT.sol**: Implements ERC-7857 for agent ownership and metadata composability.
-- **PrivacyVault.sol**: Handles shielded capital routing for private trade execution.
-- **StrategyVault.sol**: Persists AI-generated strategies with cross-chain verifiable proofs.
-
----
-
-## 🛡️ Hackathon Module Integrations
-
-ORION is a complete end-to-end integration of the following sponsor modules:
-
-### 1. 🧊 0G Compute (Sealed Inference)
-All investment reasoning is executed within **Trusted Execution Environments (TEEs)** via 0G Compute. This protects the agent's "Alpha" from front-runners and centralized surveillance.
-
-### 2. 🗄️ 0G Storage (Decentralized RAG)
-ORION persists its analytical memory and historical decisions on the **0G Storage Network**. This allows for Retrieval-Augmented Generation (RAG) that is geographically distributed and tamper-proof.
-
-### 3. 🦄 Uniswap V3 (Liquidity Manager)
-Autonomous pool discovery, liquidity provision (LPing), and intelligent routing are handled natively through the Uniswap V3 SDK on **Unichain Sepolia**.
-
-### 4. 🔗 Chainlink CRE (Workflow Orchestration)
-The **Chainlink Custom Runtime Environment (CRE)** orchestrates the handoff between AI analysis and on-chain execution, ensuring data integrity at every step.
+| Category | File/Command | Description |
+| :--- | :--- | :--- |
+| **Intelligence** | `npm run analyze` | Comparative analysis of N pools + Auto-invest optional. |
+| **Sovereign** | `npm run run-agent` | **Master Demo**: Performs Swap -> LP -> Withdraw in one flow. |
+| **Audit** | `npm run verify` | Queries 0G Chain for all Action certificates (Swap/LP/Withdraw). |
+| **Identity** | `npm run check-id` | Audits your iNFT ownership and latest Token ID status. |
+| **Portfolio** | `npm run balance` | Real-time view of assets and active Uniswap NFT positions. |
 
 ---
 
-## 🚀 Quick Start (Demo Mode)
-
-To witness the agent's full potential without spending real testnet tokens:
-
-1.  **Install dependencies**:
-    ```bash
-    npm install
-    ```
-2.  **Follow the [A-Z Setup Guide](GUIDE.md#️-environment--system-setup-a-z)** to configure your `.env`.
-3.  **Run the dry-run Pool Screener**:
-    ```bash
-    npx ts-node src/cli.ts analyze-pools --file examples/pools.json --dry-run
-    ```
-
----
-
-## 🕹️ CLI Command Reference
-
-ORION comes with a powerful command suite:
-
-| Command | Description |
-| :--- | :--- |
-| `analyze` / `analyze-pools` | 0G AI comparative analysis of multiple liquidity pools. |
-| `start` | Professional live mode listening for real swap events. |
-| `balance` | View wallet assets (ETH, USDC) and Uniswap V3 LP NFTs. |
-| `withdraw-pool` | Exit any LP position by ID and collect all fees. |
-| `mint-inft` | Register the agent's soul as an ERC-7857 iNFT on 0G Chain. |
-
----
-
-## 🔧 Self-Healing Reliability
-
-ORION is designed for the real world. If the 0G Galileo Testnet experiences high load (503 errors), the agent **automatically self-heals** by switching to a **Local Sealed Strategy Engine**, ensuring that your liquidiy management never goes offline.
-
----
-
-**Developed for the 0G Hackathon | Decentralized AI Era.**
+**Developed for the 0G Hackathon | Defining the future of Decentralized AI.**

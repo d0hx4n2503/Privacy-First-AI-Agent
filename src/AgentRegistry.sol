@@ -28,6 +28,7 @@ contract AgentRegistry {
 
     event PrivacyToggled(address indexed agentAddress, bool privacyEnabled);
     event AgentMetadataUpdated(address indexed agentAddress, string metadata);
+    event ActionLogged(address indexed agentAddress, string actionType, string dataHash);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner");
@@ -101,5 +102,12 @@ contract AgentRegistry {
      */
     function agentCount() external view returns (uint256) {
         return agentList.length;
+    }
+
+    /**
+     * @notice Log an agent action (e.g., analysis, swap) on-chain for verifiability.
+     */
+    function logAction(string calldata actionType, string calldata dataHash) external agentExists(msg.sender) {
+        emit ActionLogged(msg.sender, actionType, dataHash);
     }
 }
