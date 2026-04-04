@@ -25,7 +25,7 @@ export class ZGRAGMemory {
   private localCache: MemoryEntry[] = [];
 
   private provider: ethers.JsonRpcProvider;
-  private signer: ethers.Wallet;
+  private signer: any;
   private indexer: any;
 
   constructor() {
@@ -35,8 +35,14 @@ export class ZGRAGMemory {
     this.dryRun = process.env.DRY_RUN === "true";
 
     this.provider = new ethers.JsonRpcProvider(this.evmRpc);
-    const privateKey = process.env.ZG_PRIVATE_KEY || "";
-    this.signer = new ethers.Wallet(privateKey, this.provider);
+    const privateKey = process.env.ADMIN_PRIVATE_KEY || process.env.USER_PRIVATE_KEY;
+    
+    if (privateKey) {
+      this.signer = new ethers.Wallet(privateKey, this.provider);
+    } else {
+      // Fallback for dry-run or limited modes
+      this.signer = ethers.Wallet.createRandom().connect(this.provider);
+    }
 
     this.indexer = new Indexer(this.indexerRpc);
   }

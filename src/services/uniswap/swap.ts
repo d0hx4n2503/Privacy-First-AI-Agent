@@ -9,8 +9,8 @@ export class UniswapExec {
 
   constructor() {
     this.provider = new ethers.JsonRpcProvider(process.env.ETHEREUM_RPC_URL || "https://rpc.sepolia.org");
-    if (process.env.TRADER_PRIVATE_KEY) {
-      this.signer = new ethers.Wallet(process.env.TRADER_PRIVATE_KEY, this.provider);
+    if (process.env.ADMIN_PRIVATE_KEY) {
+      this.signer = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, this.provider);
     }
   }
 

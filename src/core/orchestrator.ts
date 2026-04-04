@@ -53,9 +53,13 @@ export class Orchestrator {
 
     try {
       const provider = new ethers.JsonRpcProvider(process.env.ZG_RPC_URL);
-      const wallet = new ethers.Wallet(process.env.ZG_PRIVATE_KEY!, provider);
+      const pk = process.env.USER_PRIVATE_KEY || process.env.ADMIN_PRIVATE_KEY;
+      
+      console.log(`📡 [Orchestrator] Debug Key: ${pk?.substring(0, 6)}... (Length: ${pk?.length})`);
+      
+      const wallet = new ethers.Wallet(pk!, provider);
       const registry = new ethers.Contract(
-        process.env.AGENT_REGISTRY_ADDRESS!,
+        ethers.getAddress(process.env.AGENT_REGISTRY_ADDRESS!),
         ["function logAction(string calldata actionType, string calldata dataHash) external"],
         wallet
       );
@@ -211,20 +215,28 @@ export class Orchestrator {
     
     try {
       const provider = new ethers.JsonRpcProvider(process.env.ZG_RPC_URL);
-      const wallet = new ethers.Wallet(process.env.ZG_PRIVATE_KEY!, provider);
+      const pk = process.env.USER_PRIVATE_KEY || process.env.ADMIN_PRIVATE_KEY;
+      const wallet = new ethers.Wallet(pk!, provider);
       
       const vaultAbi = [
         "function commitStrategy(bytes32 commitmentHash, string calldata strategyUri, bool isPrivate) external",
         "function linkExecution(bytes32 commitmentHash, string calldata txHash) external",
-        "function strategies(bytes32) external view returns (address agent, bytes32 commitmentHash, string strategyUri, bool isPrivate, uint256 timestamp, string txExecuted)"
+        "function getStrategy(bytes32 commitmentHash) external view returns (address agent, bytes32 hash, string memory uri, bool isPrivate, uint256 timestamp, string memory txExecuted)"
       ];
       
-      const vault = new ethers.Contract(this.privacyVaultAddress, vaultAbi, wallet);
+      const vault = new ethers.Contract(ethers.getAddress(this.privacyVaultAddress), vaultAbi, wallet);
       const commitment = ethers.keccak256(ethers.toUtf8Bytes(JSON.stringify(strategy)));
 
-      // 1. Check if already committed
-      const record = await vault.strategies(commitment);
-      if (record.agent === ethers.ZeroAddress) {
+      // 1. Check if already committed using a safer call or catch
+      let exists = false;
+      try {
+        const record = await vault.getStrategy(commitment);
+        exists = record.agent !== ethers.ZeroAddress;
+      } catch (e) {
+        exists = false;
+      }
+
+      if (!exists) {
         console.log(chalk.gray(`   📡 Committing strategy to PrivacyVault...`));
         const commitTx = await vault.commitStrategy(commitment, "", true);
         await commitTx.wait();

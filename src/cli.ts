@@ -62,38 +62,35 @@ program
 
       // 4. Interactive selection
       let selectedPool = null;
-      let privacyChoice = true;
+      let amountStr = "0.001";
 
       if (options.autoInvest) {
-        selectedPool = result.topPool;
-        console.log(chalk.bold.magenta(`\n🚀 [Auto-Invest] Selecting top-ranked pool: ${selectedPool.name}`));
+        selectedPool = result.inputPools.find(p => p.name.includes("ETH/USDC")) || result.topPool;
+        console.log(chalk.bold.magenta(`\n🚀 [Auto-Invest] Selecting priority pool: ${selectedPool.name}`));
       } else {
         const poolCount = Math.min(result.inputPools.length, parseInt(options.top, 10));
-        console.log(chalk.bold.yellow(`\n👉 Select a pool to invest in (1-${poolCount}) or 'q' to quit:`));
+        console.log(chalk.bold.yellow(`\n👉 Select a pool rank (1-${poolCount}) to invest in, or 'q' to quit:`));
         const choice = readlineSync.question("Selection: ");
 
         if (choice.toLowerCase() === 'q') {
           console.log(chalk.gray("Analysis complete. No investment selected."));
+          return;
         } else {
-          const idx = parseInt(choice, 10) - 1;
-          if (idx >= 0 && idx < result.inputPools.length) {
-            const rankedName = result.aiResult.rankings[idx].poolName;
+          const rankIdx = parseInt(choice, 10) - 1;
+          if (rankIdx >= 0 && rankIdx < result.aiResult.rankings.length) {
+            const rankedName = result.aiResult.rankings[rankIdx].poolName;
             selectedPool = result.inputPools.find(p => p.name === rankedName);
+            
+            if (selectedPool) {
+              console.log(chalk.bold.yellow(`\n💰 Enter investment amount in ETH (Default: 0.001):`));
+              const inputAmount = readlineSync.question("Amount: ");
+              if (inputAmount) amountStr = inputAmount;
+            }
           }
         }
       }
 
       if (selectedPool) {
-        // 5. Select amount (Default: 0.001 ETH)
-        console.log(chalk.bold.yellow(`\n💰 Enter investment amount (Default: 0.001):`));
-        const amountStr = readlineSync.question("Amount: ") || "0.001";
-        const amount = parseFloat(amountStr);
-
-        if (isNaN(amount) || amount <= 0) {
-          console.log(chalk.red("Invalid amount. skipping investment."));
-          return;
-        }
-
         console.log(chalk.bold.magenta(`\n🚀 Routing ${selectedPool.name} into execution pipeline...`));
         const orchestrator = new Orchestrator();
         await orchestrator.analyzePoolList([selectedPool], true, true, amountStr);
@@ -157,14 +154,18 @@ program
   .command("mint-inft")
   .description("Mint a Verifiable Identity (iNFT) on 0G Chain (Newton Testnet)")
   .requiredOption("--uri <uri>", "Metadata URI for the agent/identity (IPFS or 0G Storage Hash)")
+  .option("--model <name>", "AI Model name", "Llama-3.3-70B")
+  .option("--resource <name>", "Compute resource name", "0G Compute TEE")
   .action(async (options) => {
     console.log(chalk.bold.blue("\n💎 Generating Verifiable Identity (iNFT)..."));
     try {
       const minter = new iNFTMinter();
       const metadata: iNFTMetadata = {
-        agentId: "groq-alpha-001",
-        framework: "OpenClaw",
+        agentId: `groq-alpha-${Math.floor(Math.random()*1000)}`,
+        framework: "GroqAlpha",
         capabilities: ["defi-strategy", "private-inference", "autonomous-trading"],
+        modelAI: options.model,
+        resource: options.resource,
         createdAt: new Date().toISOString(),
         storageUri: options.uri
       };
@@ -176,5 +177,6 @@ program
       console.error(chalk.red("\n❌ [iNFT] Minting failed:"), error.message || error);
     }
   });
+
 
 program.parse(process.argv);

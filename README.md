@@ -1,185 +1,68 @@
-# 🤖 Groq Alpha AI: The Privacy-Preserving Autonomous DeFi Giant
+# 🛡️ Orion Privacy-First AI Agent (Triple-Proof Edition)
 
-![Banner](https://github.com/your-repo/banner.png)
+[![0G Network](https://img.shields.io/badge/Network-0G%20Newton-blue)](https://0g.ai)
+[![Chainlink](https://img.shields.io/badge/Oracle-Chainlink%20CRE-blue)](https://chain.link)
+[![ERC-7857](https://img.shields.io/badge/Identity-ERC--7857%20iNFT-green)](https://eips.ethereum.org/EIPS/eip-7857)
 
-> **Groq Alpha AI** là một hệ thống Agent AI DeFi thế hệ mới, được thiết kế để định nghĩa lại cách thức con người tương tác với thanh khoản phi tập trung. Bằng cách kết hợp tốc độ suy luận "vô đối" của **Groq Llama-3.3-70B** với nền tảng lưu trữ và xác thực của **0G Network**, chúng tôi mang đến một thực thể AI có khả năng tự quản hoàn toàn, bảo mật tuyệt đối và minh bạch On-chain.
-
----
-
-## 🌌 Tầm nhìn và Triết lý (Philosophy)
-Trong kỷ nguyên DeFi, tốc độ và sự bảo mật là hai yếu tố sống còn. Groq Alpha AI giải quyết bài toán này bằng cách:
-*   **Tốc độ (Speed)**: Tận dụng cơ sở hạ tầng LPU của Groq để đưa ra quyết định đầu tư trong milliseconds.
-*   **Riêng tư (Privacy)**: Sử dụng các giải pháp TEE và Chainlink CRE để giấu kín ý đồ chiến lược khỏi các Bot MEV.
-*   **Bằng chứng (Trust)**: Mọi suy luận của AI không còn là một "hộp đen". Chúng được băm (hash) và lưu trữ bền vững trên 0G Storage làm bằng chứng vĩnh viễn.
+Dự án này là một **AI Agent tự hành (Autonomous Agent)** tập trung vào quyền riêng tư, được xây dựng trên **0G Network**, **Chainlink CRE**, và **Uniswap**. Agent sử dụng tiêu chuẩn **iNFT (ERC-7857)** để thiết lập danh tính On-chain và thực hiện các chiến thuật DeFi (Liquidity/Swap) một cách minh bạch nhưng vẫn bảo mật tuyệt đối.
 
 ---
 
-## 🛠 Toàn cảnh Hệ sinh thái Công nghệ (Tech Stack)
+## 🔥 Các tính năng cốt lõi (Core Innovation)
 
-### 🔹 Trí tuệ Nhân tạo (Intelligence Layer)
-*   **Inference Engine**: Groq Llama-3-70B-Instruct (Primary) / 0G Compute TEE (Private).
-*   **Strategic Brain**: Hệ thống Prompt kỹ thuật chuyên sâu (`StrategySkill.md`) mô phỏng tư duy của các nhà quản lý quỹ DeFi hàng đầu.
-*   **Knowledge Bank**: Hệ thống RAG (Retrieval-Augmented Generation) lấy dữ liệu từ lịch sử giao dịch trên 0G Storage.
+### 1. 🧬 ERC-7857: Intelligence NFT (iNFT)
+Một AI Agent không chỉ là một chiếc ví. Chúng tôi sử dụng tiêu chuẩn **ERC-7857** để đúc iNFT, biến Agent thành một thực thể có "hệ điều hành" riêng (Model, Resource, Metadata) được đăng ký trên **0G Agent Registry**.
 
-### 🔹 Giao thức 0G (0G Network Stack) - Hạ tầng cốt lõi
-*   **0G Storage (Decentralized RAG)**: Lưu trữ phi tập trung cho bộ nhớ Agent. Được xử lý trong `src/services/zero-g/storage.ts`.
-*   **0G Registry (On-chain Attestation)**: Hợp đồng thông minh ghi nhận mọi hành động (Attestation). Chi tiết tại `src/core/orchestrator.ts`.
-*   **0G Compute (Sealed Inference)**: Môi trường thực thi tin cậy (TEE) cho việc gọi AI bảo mật.
-*   **iNFT (Verifiable Identity)**: Danh tính định danh duy nhất của Agent trên chuỗi khối 0G.
+### 2. 🧠 0G Compute: Sealed Inference (TEE)
+Mọi quyết định đầu tư được xử lý thông qua **0G Compute** (Môi trường thực thi tin cậy - TEE). Điều này đảm bảo phân tích của AI là "Sealed" (được niêm phong), không thể bị can thiệp và chỉ có chủ sở hữu mới truy cập được nội dung chi tiết.
 
-### 🔹 DeFi & Infrastructure
-*   **Uniswap V2/V3**: Giao thức thực thi thanh khoản mục tiêu trên Sepolia/Unichain.
-*   **StrategyVault**: Hợp đồng thông minh "Smart Vault" giúp thực thi chiến lược nguyên tử (Atomic Execution) và bảo mật tài sản.
-*   **PrivacyVault**: Lớp bảo mật On-chain giúp liên kết ẩn danh thực thi với cam kết chiến lược trên 0G Chain.
-*   **Chainlink CRE**: Điều phối quy trình xác thực dữ liệu giá (Price Feeds) thời gian thực.
+### 3. 💿 0G Storage: Decentralized RAG Memory
+Agent lưu giữ "trí nhớ" (Lịch sử giao dịch và phân tích quá khứ) trực tiếp trên **0G Storage**. Mọi hành động đều được đóng dấu mã Hash (Proof of Action), tạo ra một nhật ký hành vi bất biến.
+
+### 4. 🏛️ StrategyVault & PrivacyVault
+- **StrategyVault**: Thực hiện các lệnh phức tạp (Swap + Add Liquidity) trên Sepolia chỉ trong **01 giao dịch (Zapper)**.
+- **PrivacyVault**: Tạo liên kết mật mã giữa Phân tích AI và kết quả giao dịch thực tế, giúp Agent chứng minh được là mình đã làm đúng nhưng không làm lộ chiến thuật cho đối thủ.
 
 ---
 
-## 📦 Cài đặt & Thiết lập Môi trường (Environment Setup)
+## 🛠️ Kiến trúc "Triple Proof"
 
-Để triển khai Groq Alpha AI, hãy thực hiện theo đúng 6 bước sau đây:
+Hệ thống cung cấp 03 lớp bằng chứng cho mọi hành động:
+1.  **Proof of Identity**: Xác thực qua iNFT (Registry).
+2.  **Proof of Intelligence**: Xác thực phân tích AI qua 0G Storage Hash.
+3.  **Proof of Execution**: Xác thực giao dịch qua Uniswap VM (Sepolia).
 
-### Bước 1: Clone Source Code
-```bash
-git clone <your-repo-link>
-cd <project-folder>
-```
+---
 
-### Bước 2: Cài đặt Thư viện Node.js
-Sử dụng npm hoặc yarn để cài đặt các Dependency cần thiết:
+## 🚀 Bắt đầu nhanh (Quick Start)
+
+### Cài đặt
 ```bash
 npm install
-```
-
-### Bước 3: Cài đặt Foundry (Nếu bạn muốn triển khai Smart Contracts)
-Dự án sử dụng Foundry để quản lý Solidity Layer. Nếu máy bạn chưa có Forge/Cast, hãy chạy lệnh sau:
-```bash
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-```
-
-### Bước 4: Cấu hình Biến môi trường (.env)
-Tạo file `.env` từ file mẫu và điền chính xác các thông tin:
-```bash
 cp .env.example .env
+# Nhập các Private Keys: ADMIN_PRIVATE_KEY, USER_PRIVATE_KEY, CRE_SIGNING_KEY...
 ```
 
-**Bảng hướng dẫn lấy dữ liệu cho `.env`:**
-
-| Biến (Variable) | Ý nghĩa & Nơi lấy dữ liệu (Where to get) |
-| :--- | :--- |
-| `GROQ_API_KEY` | [Groq Console](https://console.groq.com/keys) - Bộ não AI Agent. |
-| `ZG_RPC_URL` | `https://evmrpc-testnet.0g.ai` (0G Newton Testnet). |
-| `ZG_PRIVATE_KEY` | Private Key ví chứa 0G test token (Sử dụng để ghi log On-chain). |
-| `ZG_INDEXER_URL` | `https://indexer-storage-testnet-standard.0g.ai`. |
-| `TRADER_PRIVATE_KEY` | Private Key ví dùng để thực thi lệnh Swap/LP trên Sepolia. |
-| `ETHEREUM_RPC_URL` | Endpoint mạng Sepolia (Alchemy/Infura khuyến nghị). |
-| `STRATEGY_VAULT_ADDRESS` | Địa chỉ Vault đã triển khai trên Sepolia. |
-| `PRIVACY_VAULT_ADDRESS` | Địa chỉ Privacy Vault trên mạng 0G Newton. |
-
-### Bước 5: Biên dịch Smart Contracts
-Dùng Forge để biên dịch các hợp đồng Solidity:
+### Triển khai hệ thống (Dành cho Admin)
 ```bash
-npm run compile   # Hoặc: forge build
+# Deploy bộ 3 0G Infra (Registry, INFT, Vault)
+node lightning_deploy.js
 ```
 
-### Bước 6: Khởi chạy lần đầu (First Run)
-Sử dụng chế độ Scouter để kiểm tra xem AI đã phân tích được thị trường chưa:
+### Định danh Agent (Dành cho User)
 ```bash
-npm run analyze -- --file examples/pools.json
+# Đúc iNFT của riêng bạn và đăng ký trên 0G
+npx ts-node src/cli.ts mint-inft
 ```
 
----
-
-## 🔄 Quy trình Thực thi 7 bước (The 7-Step Flow)
-Groq Alpha AI vận hành theo một quy trình khép kín, đảm bảo tính minh bạch và bảo mật tuyệt đối:
-
-1.  **AI Analysis**: AI phân tích các Pool và chọn cơ hội tốt nhất (ví dụ: ETH/USDC).
-2.  **Attestation (0G Registry)**: Ghi lại bằng chứng quyết định của AI lên chuỗi khối 0G (Proof of Intelligence).
-3.  **CRE Validation (Chainlink)**: Xác thực giá Oracle thời gian thực để đảm bảo an toàn giao dịch.
-4.  **Commit Strategy (0G PrivacyVault)**: Ghi bản cam kết ẩn danh của chiến lược dự định thực hiện.
-5.  **Vault Execution (Sepolia StrategyVault)**: Thực thi chiến lược DeFi tự động (Zap/Swap) qua Smart Vault.
-6.  **Link Execution (0G PrivacyVault)**: Liên kết mã hash giao dịch thực tế với bản cam kết ban đầu.
-7.  **Final Verification**: Kiểm chứng chéo giữa giao dịch tài sản (Sepolia) và bằng chứng ẩn danh (0G).
-
----
-
-## ⚡ Các câu lệnh Vận hành nhanh (NPM Scripts)
-
-Bạn có thể chạy các phím tắt này thông qua `npm run <command>`:
-
-| Lệnh (Shortcut) | Ý nghĩa thực thi (What it does) |
-| :--- | :--- |
-| `npm run start` | Kích hoạt bộ não tự quản ở chế độ lắng nghe thị trường 24/7. |
-| `npm run analyze` | Quét, phân tích và xếp hạng Pool đầu tư Alpha nhất. |
-| `npm run scout` | Nghiên cứu sâu thị trường và đẩy Proof lên 0G Storage. |
-| `npm run mint-inft` | Tạo danh tính iNFT xác thực cho Agent trên mạng 0G. |
-| `npm run balance` | Xem số dư ví giao dịch (ETH, USDC) trên mạng Sepolia & 0G. |
-| `npm run withdraw` | Rút thanh khoản khỏi một Position trên Uniswap V2/V3 ngay lập tức. |
-| `npm run deposit` | Nạp ETH vào StrategyVault để Agent có vốn thực thi chiến lược. |
-| `npm run deploy:vaults` | Triển khai StrategyVault (Sepolia) và PrivacyVault (0G) qua `deploy_vaults.sh`. |
-| `npm run test:vaults` | Chạy bộ test toàn diện (Foundry) cho các Smart Vaults trước khi deploy. |
-
----
-
-## 🛠️ Tham chiếu câu lệnh thực thi (Direct CLI - npx ts-node)
-
-Sử dụng `npx ts-node src/cli.ts` để có quyền kiểm soát tham số linh hoạt nhất:
-
-### 1. Kịch bản Phân tích chuyên sâu (Analyze)
+### Vận hành & Phân tích
 ```bash
-npx ts-node src/cli.ts analyze --file examples/pools.json --auto-invest --top 3
+# Phân tích danh sách Pool và đầu tư tự chọn
+npx ts-node src/cli.ts analyze --file examples/pools.json --top 3
 ```
 
-### 2. Kịch bản Nghiên cứu & Audit On-chain (Scout)
+### Kiểm chứng On-chain
 ```bash
-npx ts-node src/cli.ts scout --file examples/test-pools.json
-npm run scout -- --file examples/test-pools.json --dry-run
+# Đọc toàn bộ nhật ký hành trình của Agent trên 0G Chain
+npx ts-node tools/verify-onchain.ts
 ```
-
-### 3. Kịch bản Rút vốn & Quản lý vị thế (Withdraw)
-```bash
-npx ts-node src/cli.ts withdraw <Token_ID_Position>
-```
-
-### 4. Vận hành trí tuệ liên tục (Start)
-```bash
-npx ts-node src/cli.ts start --interval 30000
-```
-
----
-
-## 💡 Ví dụ kịch bản vận hành thực tế (Practical Usage SCENARIOS)
-
-### 1. Phân tích thị trường & Tự động xuống tiền (Auto-Invest)
-AI sẽ quét danh sách trong `pools.json`, xếp hạng và tự động thực hiện nạp 0.001 ETH vào Pool tốt nhất:
-```bash
-npm run analyze -- --file examples/pools.json --auto-invest
-```
-
-### 2. Nghiên cứu sâu & Ghi bằng chứng On-chain (Scouting Mode)
-Ghi Reasoning làm chứng cứ audit vĩnh viễn trên 0G Storage:
-```bash
-npm run scout -- --file examples/pools.json
-```
-
----
-
-## ⛓️ Triển khai Smart Contracts (EVM Deployment)
-
-Nếu bạn muốn tự vận hành các Contract riêng:
-1.  **Biên dịch**: `npm run compile`
-2.  **Triển khai Registry/Vault**: `npm run deploy:0g` (Script chạy `bash deploy.sh`)
-3.  **Xác minh**: Kiểm tra TX trên [0G Chainscan](https://chainscan-newton.0g.ai/).
-
----
-
-## 🛡 Mô hình Bảo mật (Security Model)
-Groq Alpha AI bảo vệ người dùng thông qua 3 lớp:
-1.  **Isolation**: Suy luận AI nằm trong TEE.
-2.  **Privacy Routing**: Lệnh Swap không gửi trực tiếp mà qua một lớp trung gian (PrivacyVault).
-3.  **Proof of Strategy**: Cho phép kiểm chứng AI đã làm gì qua 0G Registry.
-
----
-
-**© 2026 Groq Alpha AI - Pioneers of Decentralized Intelligence.**

@@ -3,6 +3,7 @@ out/
 cache/
 broadcast/
 lib/
+out_deploy/
 
 # TypeScript / Node
 node_modules/

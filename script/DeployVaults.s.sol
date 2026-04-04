@@ -9,7 +9,7 @@ import "src/INFT.sol";
 
 contract DeployVaults is Script {
     function run() external {
-        uint256 pk = vm.envUint("TRADER_PRIVATE_KEY");
+        uint256 pk = vm.envUint("ADMIN_PRIVATE_KEY");
         vm.startBroadcast(pk);
         
         StrategyVault strategyVault = new StrategyVault(0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008);
@@ -19,13 +19,14 @@ contract DeployVaults is Script {
     }
     
     function runPrivacy() external {
-        uint256 pk = vm.envUint("ZG_PRIVATE_KEY");
+        uint256 pk = vm.envUint("ADMIN_PRIVATE_KEY");
         vm.startBroadcast(pk);
         
         AgentRegistry agentRegistry = new AgentRegistry();
         console.log("Deployed AgentRegistry to:", address(agentRegistry));
 
-        INFT inft = new INFT();
+        // Use the deployer as initial oracle for testing
+        INFT inft = new INFT(vm.addr(pk));
         console.log("Deployed INFT to:", address(inft));
 
         PrivacyVault privacyVault = new PrivacyVault();

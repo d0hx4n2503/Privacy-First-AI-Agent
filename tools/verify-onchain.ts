@@ -2,13 +2,18 @@ import "dotenv/config";
 import { ethers } from "ethers";
 
 async function verify() {
-  const provider = new ethers.JsonRpcProvider(process.env.ZG_RPC_URL);
-  const registryAddress = process.env.AGENT_REGISTRY_ADDRESS!;
-  const agentAddress = process.env.AGENT_ADDRESS!;
-
+  const provider = new ethers.JsonRpcProvider(process.env.ZG_RPC_URL || "https://evmrpc-testnet.0g.ai");
+  
+  // Use getAddress to normalize and catch any format errors early
+  const registryAddress = ethers.getAddress(process.env.AGENT_REGISTRY_ADDRESS!);
+  const agentAddress = ethers.getAddress(process.env.AGENT_ADDRESS!);
+  
   console.log("=======================================================");
   console.log("   🛡️  ORION ON-CHAIN VERIFIER  — Proof of life on 0G Chain");
   console.log("=======================================================\n");
+
+  console.log(`📡 [Verifier] Registry: ${registryAddress}`);
+  console.log(`📡 [Verifier] Agent   : ${agentAddress}\n`);
 
   const abi = [
     "function getAgent(address agentAddr) external view returns (tuple(address owner, string inftTokenId, string metadata, bool privacyEnabled, uint256 registeredAt))",
@@ -18,7 +23,7 @@ async function verify() {
   const registry = new ethers.Contract(registryAddress, abi, provider);
 
   // 1. Check Registration
-  console.log(`👤 Checking Agent Identity: ${agentAddress}...`);
+  console.log(`👤 Checking Agent Identity...`);
   try {
     const info = await registry.getAgent(agentAddress);
     if (Number(info.registeredAt) === 0) {
@@ -37,17 +42,17 @@ async function verify() {
   console.log("\n📜 Fetching Recent Action Logs (Events)...");
   try {
     const filter = registry.filters.ActionLogged(agentAddress);
-    const events = await registry.queryFilter(filter, -1000); // Look back 1,000 blocks
+    const events = await registry.queryFilter(filter, -2000); // Look back 2,000 blocks
 
     if (events.length === 0) {
-      console.log("⚠️  No actions recorded yet. Run a session via 'examples/sovereign-agent.ts'!");
+      console.log("⚠️  No actions recorded yet. Run a session via 'analyze'!");
     } else {
       console.log(`🎉 Found ${events.length} verifiable action(s) for this Agent:\n`);
       events.forEach((evt: any, i: number) => {
         const { actionType, dataHash } = evt.args;
         console.log(`📍 Action #${i + 1}: [${actionType}]`);
         console.log(`💿 Proof Hash (0G Storage): ${dataHash}`);
-        console.log(`⛓️  Explorer Link          : https://chainscan-galileo.0g.ai/tx/${evt.transactionHash}`);
+        console.log(`⛓️  Explorer Link          : https://chainscan-newton.0g.ai/tx/${evt.transactionHash}`);
         console.log("───────────────────────────────────────────────────────");
       });
     }
