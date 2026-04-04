@@ -59,11 +59,13 @@ export class PoolReporter {
 
     if (top.analysis_breakdown) {
       console.log(chalk.bold.cyan(`\n    🎯 STRATEGIC DEEP-DIVE (QUADRANT ANALYSIS):`));
-      console.log(chalk.white(`     • 🌐 Sentiment : ${top.analysis_breakdown.market_sentiment}`));
-      console.log(chalk.white(`     • 🧬 Technical : ${top.analysis_breakdown.technical_health}`));
+      console.log(chalk.white(`     • 📊 On-Chain  : ${top.analysis_breakdown.onchain_analysis}`));
+      console.log(chalk.white(`     • 📈 Market    : ${top.analysis_breakdown.market_analysis}`));
+      console.log(chalk.white(`     • 🌐 Social    : ${top.analysis_breakdown.social_analysis}`));
       console.log(chalk.white(`     • 💰 Yield     : ${top.analysis_breakdown.yield_analysis}`));
-      console.log(chalk.white(`     • 🛡️  Risk      : ${top.analysis_breakdown.risk_mitigation}`));
+      console.log(chalk.white(`     • 🛡️  Mitigation: ${top.analysis_breakdown.risk_mitigation}`));
     }
+
 
     // ─── Source label ────────────────────────────────────────────
     console.log(chalk.cyan("\n    🔐 Source: 0G Compute Sealed Inference — privacy-preserved, TEE-verified."));

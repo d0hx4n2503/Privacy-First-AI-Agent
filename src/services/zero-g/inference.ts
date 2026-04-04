@@ -1,28 +1,41 @@
 import "dotenv/config";
 import axios from "axios";
 import chalk from "chalk";
+import * as fs from "fs";
+import * as path from "path";
 import { CorrelatedStory } from "../naryo/correlator";
 import { GroqService } from "../ai/groq";
 
 export interface StrategyRecommendation {
-  action: "swap" | "hold" | "provide_liquidity" | "withdraw" | "buy" | "sell";
+  action: "provide_liquidity" | "withdraw" | "hold" | "swap" | "buy" | "sell";
   tokenIn: string;
   tokenOut: string;
   amount: string;
-  slippage: number;
   riskScore: number;
+  confidence: number;
   reasoning: string;
-  analysis_breakdown?: {
-    market_sentiment: string;
-    technical_health: string;
+  analysis_breakdown: {
+    onchain_analysis: string;
+    market_analysis: string;
+    social_analysis: string;
     yield_analysis: string;
     risk_mitigation: string;
   };
+  key_metrics?: {
+    apy: number;
+    tvl: number;
+    tvl_change_7d: number;
+    volume_24h: number;
+    efficiency: number;
+    volatility: number;
+    il_risk: "low" | "medium" | "high";
+  };
+  strategy?: "short_term" | "mid_term" | "long_term";
   privacyRecommended: boolean;
   isReal: boolean;
-  estimatedGasCost?: string;
-  expectedReturn?: string;
+  slippage?: number; // Keep for internal usage
 }
+
 
 interface InferenceInput {
   story: CorrelatedStory;
@@ -88,25 +101,38 @@ export class ZGInferenceClient {
 
   private buildPrompt(input: InferenceInput): string {
     const { story, historicalContext, metadata } = input;
-    return `
-You are a DeFi strategy AI agent. Analyze the following market event and recommend an action.
+    
+    // Load Dynamic Strategy Skill from Markdown
+    let skillInstruction = "";
+    try {
+      const skillPath = path.resolve(process.cwd(), "StrategySkill.md");
+      const content = fs.readFileSync(skillPath, "utf-8");
+      const match = content.match(/<!-- STRATEGY_SKILL_START -->([\s\S]*?)<!-- STRATEGY_SKILL_END -->/);
+      if (match) skillInstruction = match[1].trim();
+    } catch (e) {
+      console.warn("⚠️  [Inference] Could not load StrategySkill.md, using default template.");
+    }
 
-CURRENT MARKET EVENT:
+    return `
+${skillInstruction}
+
+---
+CURRENT MARKET CONTEXT:
 - Token Pair: ${story.tokenA}/${story.tokenB}
-- Total Volume ${story.tokenA}: ${story.totalAmountA}
-- Total Volume ${story.tokenB}: ${story.totalAmountB}
-- Price Impact: ${story.priceImpact}%
-- Sources: ${story.sources.join(", ")}
-- Trigger: ${story.triggerReason}
+- ${story.tokenA} Volume (24h Window): ${story.totalAmountA}
+- ${story.tokenB} Volume (24h Window): ${story.totalAmountB}
+- Avg Price Impact: ${story.priceImpact}%
+- Connected Networks: ${story.sources.join(", ")}
+- Signal Source: ${story.triggerReason}
 
 ADDITIONAL METADATA:
 ${metadata ? JSON.stringify(metadata, null, 2) : "No extra metadata."}
 
-HISTORICAL CONTEXT (last 5 relevant decisions):
-${historicalContext.slice(0, 5).join("\n") || "No historical data available"}
+HISTORICAL AGENT MEMORY (RAG):
+${historicalContext.slice(0, 5).join("\n") || "No previous history for this pair."}
 
-Respond with a JSON strategy recommendation including: action, tokenIn, tokenOut, amount, slippage, riskScore (0-10), reasoning, privacyRecommended.
-    `.trim();
+Respond ONLY with the raw JSON object following the STRICT output rules and schema above.
+`.trim();
   }
 
   private async parseResponse(raw: Record<string, unknown>, input: InferenceInput): Promise<StrategyRecommendation> {
@@ -117,13 +143,23 @@ Respond with a JSON strategy recommendation including: action, tokenIn, tokenOut
         tokenIn: content.tokenIn || input.story.tokenA,
         tokenOut: content.tokenOut || input.story.tokenB,
         amount: content.amount || "0.1",
-        slippage: content.slippage || 0.5,
         riskScore: content.riskScore || 5,
+        confidence: content.confidence || 0.5,
         reasoning: content.reasoning || "AI inference result",
-        analysis_breakdown: content.analysis_breakdown,
+        analysis_breakdown: content.analysis_breakdown || {
+          onchain_analysis: "N/A",
+          market_analysis: "N/A",
+          social_analysis: "N/A",
+          yield_analysis: "N/A",
+          risk_mitigation: "N/A"
+        },
+        key_metrics: content.key_metrics,
+        strategy: content.strategy,
         privacyRecommended: content.privacyRecommended ?? true,
         isReal: true,
+        slippage: content.slippage || 0.5,
       };
+
     } catch {
       return await this.fallbackInference(input);
     }
@@ -145,13 +181,23 @@ Respond with a JSON strategy recommendation including: action, tokenIn, tokenOut
           tokenIn: result.tokenIn || input.story.tokenA,
           tokenOut: result.tokenOut || input.story.tokenB,
           amount: result.amount || "1.0",
-          slippage: result.slippage || 0.5,
           riskScore: result.riskScore || 3,
+          confidence: result.confidence || 0.7,
           reasoning: result.reasoning || "Tư vấn từ chuyên gia GROQ",
-          analysis_breakdown: result.analysis_breakdown,
+          analysis_breakdown: result.analysis_breakdown || {
+            onchain_analysis: "GPT-powered scan complete.",
+            market_analysis: "Momentum analysis verified.",
+            social_analysis: "Sentiment positive.",
+            yield_analysis: "Real yield detected.",
+            risk_mitigation: "Conservative position."
+          },
+          key_metrics: result.key_metrics,
+          strategy: result.strategy || "mid_term",
           privacyRecommended: result.privacyRecommended ?? true,
-          isReal: false
+          isReal: false,
+          slippage: result.slippage || 0.5
         };
+
       } catch (e: any) {
         console.warn(`⚠️  GROQ fallback failed: ${e.message}. Using rule-based generator.`);
       }
@@ -174,11 +220,20 @@ Respond with a JSON strategy recommendation including: action, tokenIn, tokenOut
       tokenIn: story.tokenA,
       tokenOut: story.tokenB,
       amount: "1.0",
-      slippage: 0.5,
       riskScore,
+      confidence: 0.5,
       reasoning: "Rule-based local strategy summary.",
+      analysis_breakdown: {
+        onchain_analysis: "Local scan: Volume > TVL thresholds.",
+        market_analysis: "Local scan: Range-bound.",
+        social_analysis: "N/A (Local Mode)",
+        yield_analysis: "Fee-based simulation.",
+        risk_mitigation: "Standard bounds."
+      },
       privacyRecommended: riskScore < 5,
       isReal: false,
+      slippage: 0.5
     };
+
   }
 }

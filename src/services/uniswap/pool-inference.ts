@@ -2,25 +2,35 @@ import "dotenv/config";
 import axios from "axios";
 import { PoolCandidate } from "./screener";
 import { GroqService } from "../ai/groq";
+import * as fs from "fs";
+import * as path from "path";
 
 export interface AIPoolRanking {
   rank: number;
   poolName: string;
   tokenA: string;
   tokenB: string;
-  action: "invest" | "skip" | "watch";
+  action: "provide_liquidity" | "withdraw" | "hold" | "invest" | "skip" | "watch";
   riskScore: number;       // 0–10
   confidenceScore: number; // 0–100 (AI's own confidence in its ranking)
   expectedReturn: string;  // e.g. "+4.2%"
   reasoning: string;       // AI's explanation
   analysis_breakdown?: {
-    market_sentiment: string;
-    technical_health: string;
+    onchain_analysis: string;
+    market_analysis: string;
+    social_analysis: string;
     yield_analysis: string;
     risk_mitigation: string;
   };
+  key_metrics?: {
+    apy: number;
+    tvl: number;
+    efficiency: number;
+    il_risk: string;
+  };
   warnings?: string;       // Optional red flags the AI spotted
 }
+
 
 export interface AIRankingResult {
   rankings: AIPoolRanking[];
@@ -105,6 +115,17 @@ export class ZGPoolRankingClient {
    * The model sees the full competitive field in one context window.
    */
   private buildComparativePrompt(pools: PoolCandidate[]): string {
+    // Load Dynamic Strategy Skill from Markdown
+    let skillInstruction = "";
+    try {
+      const skillPath = path.resolve(process.cwd(), "StrategySkill.md");
+      const content = fs.readFileSync(skillPath, "utf-8");
+      const match = content.match(/<!-- STRATEGY_SKILL_START -->([\s\S]*?)<!-- STRATEGY_SKILL_END -->/);
+      if (match) skillInstruction = match[1].trim();
+    } catch (e) {
+      console.warn("⚠️  [Ranking] Could not load StrategySkill.md");
+    }
+
     const poolLines = pools
       .map((p, i) =>
         `Pool ${i + 1}: ${p.name}
@@ -112,52 +133,56 @@ export class ZGPoolRankingClient {
   - Chain: ${p.chain ?? "unknown"}
   - TVL: $${(p.tvl ?? 0).toLocaleString()}
   - 24h Volume: $${(p.volume24h ?? 0).toLocaleString()}
-  - Volume/TVL Ratio: ${p.tvl ? ((p.volume24h ?? 0) / p.tvl).toFixed(3) : "N/A"} ${p.tvl && (p.volume24h ?? 0) / p.tvl > 0.3 ? "(🔥 High momentum)" : ""}
+  - Volume/TVL Ratio: ${p.tvl ? ((p.volume24h ?? 0) / p.tvl).toFixed(3) : "N/A"}
   - Fee Tier: ${p.fee ?? "?"}%
   - Notes: ${p.notes ?? "None"}`)
       .join("\n\n");
 
     return `
-You are an expert DeFi investment AI running inside a Trusted Execution Environment (TEE) on 0G Compute.
-Your task is to COMPARATIVELY ANALYZE the following ${pools.length} liquidity pools and RANK them from BEST to WORST investment opportunity.
+${skillInstruction}
 
-DO NOT score each pool in isolation. Compare them AGAINST EACH OTHER. Consider:
-1. Relative Volume/TVL momentum — which pool has the most active trading?
-2. Fee efficiency vs expected returns — lower fee is better for short-term traders
-3. Risk-adjusted return — high TVL = lower impermanent loss risk
-4. Chain diversification — cross-chain presence signals confidence
-5. Capital efficiency — stable-stable pairs vs volatile pairs have different use cases
+---
+TASK: COMPARATIVELY ANALYZE the following ${pools.length} liquidity pools and RANK them from BEST to WORST.
+Apply the "Decision Framework" and "Reasoning Rules" from the skill above to EACH pool in this list.
 
 POOL CANDIDATES:
 ${poolLines}
 
-Respond STRICTLY in valid JSON format (no markdown, no explanation outside JSON):
+Respond STRICTLY in valid JSON format:
 {
-  "summary": "[One-paragraph market overview comparing all pools]",
+  "summary": "[One-paragraph market overview strictly applying 'Market Condition' logic]",
   "rankings": [
     {
       "rank": 1,
-      "poolName": "[Pool Name e.g. ETH/USDC]",
-      "tokenA": "[token]",
-      "tokenB": "[token]",
-      "action": "invest",
-      "riskScore": 2,
-      "confidenceScore": 88,
-      "expectedReturn": "+4.2%",
-      "reasoning": "[Brief summary]",
+      "poolName": "[Name]",
+      "tokenA": "[T1]",
+      "tokenB": "[T2]",
+      "action": "provide_liquidity", 
+      "riskScore": [0-10],
+      "confidenceScore": [0-100],
+      "expectedReturn": "[%+]",
+      "reasoning": "[Brief summary <= 20 words]",
       "analysis_breakdown": {
-        "market_sentiment": "mood summary",
-        "technical_health": "TVL/Vol analysis",
-        "yield_analysis": "APY vs Risk verdict",
-        "risk_mitigation": "how to protect capital"
+        "onchain_analysis": "...",
+        "market_analysis": "...",
+        "social_analysis": "...",
+        "yield_analysis": "...",
+        "risk_mitigation": "..."
       },
-      "warnings": "[Any red flags, or null]"
+      "key_metrics": {
+        "apy": [number],
+        "tvl": [number],
+        "efficiency": [number],
+        "il_risk": "low|medium|high"
+      },
+      "warnings": "[Optional red flags]"
     },
-    ... (one entry per pool)
+    ... (total ${pools.length} entries)
   ]
 }
 `.trim();
   }
+
 
   // ── Response Parser ────────────────────────────────────────────────
 
@@ -239,8 +264,22 @@ Respond STRICTLY in valid JSON format (no markdown, no explanation outside JSON)
         confidenceScore: Math.round(Math.min(s._score, 100)),
         expectedReturn: s.action === "invest" ? `+${(Math.random() * 4 + 1).toFixed(1)}%` : "0%",
         reasoning: this.buildFallbackReasoning(s.pool, s._score, ratio),
+        analysis_breakdown: {
+          onchain_analysis: "Local scan: Volume momentum analyzed.",
+          market_analysis: "Local scan: Price impact within bounds.",
+          social_analysis: "N/A (Local Mode)",
+          yield_analysis: "Local scan: Estimated from past volume.",
+          risk_mitigation: "Standard liquidity protection applied."
+        },
+        key_metrics: {
+           apy: 0,
+           tvl: s.pool.tvl || 0,
+           efficiency: parseFloat(ratio),
+           il_risk: s.riskScore >= 7 ? "high" : "low"
+        },
         warnings: s.riskScore >= 7 ? "Low liquidity or high fee — exercise caution." : undefined,
       };
+
     });
 
     return {

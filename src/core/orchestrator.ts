@@ -118,9 +118,22 @@ export class Orchestrator {
     }
     const sorted = results.sort((a, b) => a.strategy.riskScore - b.strategy.riskScore);
     const top3 = sorted.slice(0, 3);
-    console.log(chalk.bold.green(`\n🏆 TOP 3 ALPHA OPPORTUNITIES IDENTIFIED:`));
-    top3.forEach((res, i) => console.log(chalk.bold.white(`\n--- RANK #${i + 1}: ${res.strategy.tokenIn}/${res.strategy.tokenOut} ---`)));
+    
+    console.log(chalk.bold.green(`\n🏆 TOP 3 ALPHA OPPORTUNITIES IDENTIFIED (CONSOLIDATED):`));
+    console.log(chalk.gray("─".repeat(80)));
+    
+    top3.forEach((res, i) => {
+      const s = res.strategy;
+      const rankIcon = i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉";
+      console.log(`${rankIcon} ${chalk.bold.white(`RANK #${i + 1}: ${s.tokenIn}/${s.tokenOut}`)}`);
+      console.log(`   ${chalk.yellow("Action  :")} ${s.action.toUpperCase()}`);
+      console.log(`   ${chalk.yellow("Risk    :")} ${s.riskScore}/10`);
+      console.log(`   ${chalk.yellow("Reason  :")} ${s.reasoning}`);
+      if (s.strategy) console.log(`   ${chalk.yellow("Horizon :")} ${s.strategy.toUpperCase()}`);
+      console.log(chalk.gray("─".repeat(40)));
+    });
   }
+
 
   private async handleStory(story: CorrelatedStory, autoPrompt: boolean, privacyOverride?: boolean, amountOverride?: string) {
     console.log(chalk.bgMagenta.white(`\n🚨 NEW MARKET STORY DETECTED: ${story.tokenA}/${story.tokenB} 🚨`));

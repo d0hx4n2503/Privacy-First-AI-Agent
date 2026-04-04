@@ -7,11 +7,12 @@ import chalk from "chalk";
 
 export interface AgentAnalysis {
   strategy: StrategyRecommendation;
-  confidence: "low" | "medium" | "high";
+  confidence: string | number;
   reasoning: string;
   storageHash?: string;
   timestamp: number;
 }
+
 
 /**
  * OpenClaw-compatible AI Agent implementing the Agent Commerce Protocol (ACP).
@@ -92,16 +93,29 @@ export class PrivacyDeFiAgent {
   private logAnalysis(analysis: AgentAnalysis): void {
     const { strategy } = analysis;
     console.log(chalk.bold.cyan(`\n📊 [Groq Alpha AI] Strategic Analysis Result:`));
-    console.log(`   Action   : ${chalk.bold.yellow(strategy.action.toUpperCase())}`);
-    console.log(`   Risk     : ${strategy.riskScore}/10`);
-    console.log(`   Summary  : ${strategy.reasoning}`);
+    console.log(`   Action     : ${chalk.bold.yellow(strategy.action.toUpperCase())}`);
+    console.log(`   Risk       : ${strategy.riskScore}/10`);
+    console.log(`   Confidence : ${(Number(strategy.confidence) * 100).toFixed(0)}%`);
+    console.log(`   Summary    : ${strategy.reasoning}`);
     
     if (strategy.analysis_breakdown) {
       console.log(chalk.gray(`\n   --- Deep Analysis Breakdown ---`));
-      console.log(`   🌐 Market Sentiment : ${strategy.analysis_breakdown.market_sentiment}`);
-      console.log(`   🧬 Technical Health : ${strategy.analysis_breakdown.technical_health}`);
-      console.log(`   💰 Yield Analysis    : ${strategy.analysis_breakdown.yield_analysis}`);
-      console.log(`   🛡️  Risk Mitigation  : ${strategy.analysis_breakdown.risk_mitigation}`);
+      console.log(`   📊 On-Chain  : ${strategy.analysis_breakdown.onchain_analysis}`);
+      console.log(`   📈 Market    : ${strategy.analysis_breakdown.market_analysis}`);
+      console.log(`   🌐 Social    : ${strategy.analysis_breakdown.social_analysis}`);
+      console.log(`   💰 Yield     : ${strategy.analysis_breakdown.yield_analysis}`);
+      console.log(`   🛡️  Mitigation: ${strategy.analysis_breakdown.risk_mitigation}`);
+    }
+
+    if (strategy.key_metrics) {
+      console.log(chalk.gray(`\n   --- Key Tech Metrics ---`));
+      console.log(`   APY: ${strategy.key_metrics.apy}% | TVL: $${(strategy.key_metrics.tvl/1e6).toFixed(1)}M | Eff: ${strategy.key_metrics.efficiency}`);
+      console.log(`   Volatility: ${strategy.key_metrics.volatility} | IL Risk: ${strategy.key_metrics.il_risk.toUpperCase()}`);
+    }
+    
+    if (strategy.strategy) {
+      console.log(chalk.bold.blue(`\n   🎯 Horizon: ${strategy.strategy.replace("_", " ").toUpperCase()}`));
     }
   }
+
 }

@@ -4,11 +4,11 @@ import chalk from "chalk";
 
 async function deposit() {
   const vaultAddress = process.env.STRATEGY_VAULT_ADDRESS;
-  const privateKey = process.env.TRADER_PRIVATE_KEY;
+  const privateKey = process.env.USER_PRIVATE_KEY;
   const rpcUrl = process.env.ETHEREUM_RPC_URL || "https://rpc.sepolia.org";
 
   if (!vaultAddress || !privateKey) {
-    console.error(chalk.red("❌ Error: STRATEGY_VAULT_ADDRESS or TRADER_PRIVATE_KEY is missing in .env"));
+    console.error(chalk.red("❌ Error: STRATEGY_VAULT_ADDRESS or USER_PRIVATE_KEY is missing in .env"));
     return;
   }
 

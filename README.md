@@ -134,6 +134,7 @@ npx ts-node src/cli.ts analyze --file examples/pools.json --auto-invest --top 3
 ### 2. Kịch bản Nghiên cứu & Audit On-chain (Scout)
 ```bash
 npx ts-node src/cli.ts scout --file examples/test-pools.json
+npm run scout -- --file examples/test-pools.json --dry-run
 ```
 
 ### 3. Kịch bản Rút vốn & Quản lý vị thế (Withdraw)
