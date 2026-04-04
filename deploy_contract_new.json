@@ -1,0 +1,24 @@
+{
+  "networks": {
+    "sepolia": {
+      "STRATEGY_VAULT_ADDRESS": "0xFb2338A136e66e61535829C321179C203718E69d",
+      "WETH": "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9",
+      "USDC": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "UNISWAP_V2_ROUTER": "0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008"
+    },
+    "0g_newton": {
+      "PRIVACY_VAULT_ADDRESS": "0x6E1b1ADbB014fd79364D20461053f7D25034cA6a",
+      "AGENT_REGISTRY_ADDRESS": "0xC1ffAffF38574e89C658081229CC778a161A2906",
+      "INFT_CONTRACT_ADDRESS": "0x69242f27d22346a0A8F0a3746831483BAA87726C"
+    }
+  },
+  "agent": {
+    "AGENT_ADDRESS": "0x9A1834Ec56b672b00B662C15e6D33780299148a0",
+    "AGENT_TOPIC_ID": "0.0.8382650",
+    "MY_AGENT_INFT_ID": 1,
+    "ZG_PRIVATE_KEY": "0xa56b...216",
+    "TRADER_PRIVATE_KEY": "0xa56b...216"
+  },
+  "timestamp": "2026-04-04T18:04:00+07:00",
+  "note": "TOTAL RE-DEPLOYMENT SUCCESSFUL. All contracts (StrategyVault, PrivacyVault, AgentRegistry, INFT) are newly deployed with the new TRADER_PRIVATE_KEY. Agent Identity (Token ID: 1) minted on the new INFT contract."
+}

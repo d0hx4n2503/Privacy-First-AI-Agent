@@ -4,6 +4,8 @@ pragma solidity ^0.8.20;
 import "forge-std/Script.sol";
 import "src/StrategyVault.sol";
 import "src/PrivacyVault.sol";
+import "src/AgentRegistry.sol";
+import "src/INFT.sol";
 
 contract DeployVaults is Script {
     function run() external {
@@ -20,9 +22,16 @@ contract DeployVaults is Script {
         uint256 pk = vm.envUint("ZG_PRIVATE_KEY");
         vm.startBroadcast(pk);
         
+        AgentRegistry agentRegistry = new AgentRegistry();
+        console.log("Deployed AgentRegistry to:", address(agentRegistry));
+
+        INFT inft = new INFT();
+        console.log("Deployed INFT to:", address(inft));
+
         PrivacyVault privacyVault = new PrivacyVault();
         console.log("Deployed PrivacyVault to:", address(privacyVault));
         
         vm.stopBroadcast();
     }
+
 }

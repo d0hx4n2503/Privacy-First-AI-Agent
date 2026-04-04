@@ -11,9 +11,12 @@ echo "🏦 [Sepolia] Triển khai StrategyVault via Script..."
 STRATEGY_RES=$($FORGE_BIN script script/DeployVaults.s.sol --rpc-url "$ETHEREUM_RPC_URL" --broadcast --legacy)
 STRATEGY_ADDR=$(echo "$STRATEGY_RES" | grep "Deployed StrategyVault to:" | awk '{print $4}')
 
-# 2. Deploy PrivacyVault lên 0G Newton
-echo "🔐 [0G Newton] Triển khai PrivacyVault via Script..."
+# 2. Deploy Contracts lên 0G Newton
+echo "🔐 [0G Newton] Triển khai Contracts (Registry, INFT, Vault) via Script..."
 PRIVACY_RES=$($FORGE_BIN script script/DeployVaults.s.sol --sig "runPrivacy()" --rpc-url "$ZG_RPC_URL" --broadcast --legacy --gas-price 2000000000)
+
+REGISTRY_ADDR=$(echo "$PRIVACY_RES" | grep "Deployed AgentRegistry to:" | awk '{print $4}')
+INFT_ADDR=$(echo "$PRIVACY_RES" | grep "Deployed INFT to:" | awk '{print $4}')
 PRIVACY_ADDR=$(echo "$PRIVACY_RES" | grep "Deployed PrivacyVault to:" | awk '{print $4}')
 
 # 3. Cập nhật .env tự động
@@ -24,10 +27,23 @@ if [ ! -z "$STRATEGY_ADDR" ]; then
     echo "✅ Success: StrategyVault @ $STRATEGY_ADDR"
 fi
 
+if [ ! -z "$REGISTRY_ADDR" ]; then
+    sed -i "/AGENT_REGISTRY_ADDRESS/d" .env
+    echo "AGENT_REGISTRY_ADDRESS=$REGISTRY_ADDR" >> .env
+    echo "✅ Success: AgentRegistry @ $REGISTRY_ADDR"
+fi
+
+if [ ! -z "$INFT_ADDR" ]; then
+    sed -i "/INFT_CONTRACT_ADDRESS/d" .env
+    echo "INFT_CONTRACT_ADDRESS=$INFT_ADDR" >> .env
+    echo "✅ Success: INFT @ $INFT_ADDR"
+fi
+
 if [ ! -z "$PRIVACY_ADDR" ]; then
     sed -i "/PRIVACY_VAULT_ADDRESS/d" .env
     echo "PRIVACY_VAULT_ADDRESS=$PRIVACY_ADDR" >> .env
     echo "✅ Success: PrivacyVault @ $PRIVACY_ADDR"
 fi
+
 
 echo "🎉 Triển khai hoàn tất! AGENT đã sẵn sàng tiếp quản 0.5 ETH của bạn trên On-Chain."
