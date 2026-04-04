@@ -1,0 +1,84 @@
+[
+  {
+    "name": "Lido STETH",
+    "tokenA": "STETH",
+    "tokenB": "ETH",
+    "tvl": 19044616011,
+    "volume24h": 500000000,
+    "fee": 0.01,
+    "notes": "Project: Lido, APY: 2.412%, IL Risk: No, Prediction: Stable/Up (74% confidence)",
+    "metadata": {
+      "apy": 2.412,
+      "exposure": "single",
+      "prediction": "Stable/Up",
+      "p-probability": 74
+    }
+  },
+  {
+    "name": "Sky Lending SUSDS",
+    "tokenA": "SUSDS",
+    "tokenB": "USDC",
+    "tvl": 6732055005,
+    "volume24h": 120000000,
+    "fee": 0.01,
+    "notes": "Project: Sky-Lending, Stablecoin: True, APY: 3.75%, Prediction: Stable/Up (66% confidence)",
+    "metadata": {
+      "apy": 3.75,
+      "stablecoin": true
+    }
+  },
+  {
+    "name": "Ethena SUSDE",
+    "tokenA": "SUSDE",
+    "tokenB": "USDE",
+    "tvl": 3523782013,
+    "volume24h": 85000000,
+    "fee": 0.05,
+    "notes": "Project: Ethena, 7 days unstaking, APY: 3.52%, Prediction: Stable/Up (79% confidence)",
+    "metadata": {
+      "apy": 3.522,
+      "unstakingPeriod": "7 days"
+    }
+  },
+  {
+    "name": "Maple USDC Syrup",
+    "tokenA": "USDC",
+    "tokenB": "USDT",
+    "tvl": 3145042869,
+    "volume24h": 45000000,
+    "fee": 0.1,
+    "notes": "Project: Maple, APY: 4.63%, 30D APY Mean: 4.40%, High Confidence Prediction",
+    "metadata": {
+      "apy": 4.63,
+      "30dMean": 4.40
+    }
+  },
+  {
+    "name": "Degen-Farm HighRisk",
+    "tokenA": "DEGEN",
+    "tokenB": "ETH",
+    "tvl": 150000,
+    "volume24h": 900000,
+    "fee": 1.0,
+    "notes": "Project: Unknown-Farm, APY: 1250%, IL Risk: HIGH, Prediction: Volatile/Down (90% confidence)",
+    "metadata": {
+      "apy": 1250,
+      "ilRisk": "high",
+      "prediction": "Volatile/Down",
+      "p-probability": 90
+    }
+  },
+  {
+    "name": "Ghost-Liquidity Test",
+    "tokenA": "GHOST",
+    "tokenB": "USDC",
+    "tvl": 10000,
+    "volume24h": 50000,
+    "fee": 0.3,
+    "notes": "Project: Ghost, APY: 50%, Outlier: True, Underlying tokens are suspicious",
+    "metadata": {
+      "apy": 50,
+      "outlier": true
+    }
+  }
+]

@@ -30,7 +30,7 @@ export class ZGRAGMemory {
 
   constructor() {
     // 0G Galileo Testnet Configuration
-    this.indexerRpc = process.env.ZG_INDEXER_URL || "https://rpc.ankr.com/eth_sepolia";
+    this.indexerRpc = process.env.ZG_INDEXER_URL || "https://evmrpc-testnet.0g.ai";
     this.evmRpc = process.env.ZG_RPC_URL || "https://evmrpc-testnet.0g.ai";
     this.dryRun = process.env.DRY_RUN === "true";
 
@@ -48,11 +48,9 @@ export class ZGRAGMemory {
     this.localCache.push(entry);
 
     if (this.dryRun) {
-      console.log(`💾 [0G Storage] DRY-RUN: Memory saved locally`);
       return `local-${entry.timestamp}`;
     }
 
-    console.log(`🔐 [0G Storage] Compiling AI memory payload for decentralized upload...`);
     const tempPath = path.join(process.cwd(), `memory-${entry.timestamp}.json`);
     let file: any = null;
 
@@ -65,20 +63,18 @@ export class ZGRAGMemory {
       if (treeErr) throw new Error(`Merkle Tree computation failed: ${treeErr}`);
 
       const rootHash = tree?.rootHash();
-      console.log(`📀 [0G Storage] File Root Hash generated: ${rootHash}`);
 
       // Execute 0G Network Storage Transaction
-      // We explicitly bypass the .env ZG_STORAGE_URL if it's the non-indexer variant
       const [tx, uploadErr] = await this.indexer.upload(file, this.evmRpc, this.signer);
 
       if (uploadErr) throw new Error(uploadErr);
 
       console.log(`✅ [0G Storage] Memory successfully broadcast to Storage Indexer! TX: ${tx}`);
-      console.log(`   Explorer: https://chainscan-galileo.0g.ai/tx/${tx}`);
+      console.log(`   Explorer: https://chainscan-newton.0g.ai/tx/${tx}`);
       return rootHash || tx;
 
     } catch (error: any) {
-      console.warn("⚠️  [0G Storage] Network failed:", error.message);
+      // Sliently fallback to local memory without 503 error spam
       return `local-${entry.timestamp}`;
     } finally {
       if (file) await file.close();

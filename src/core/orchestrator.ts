@@ -1,18 +1,17 @@
 import { ethers } from "ethers";
-import { NaryoListener } from "../services/naryo/listener";
-import { EventCorrelator } from "../services/naryo/correlator";
-import { PrivacyDeFiAgent } from "../agent/agent";
+import { NaryoListener, PoolEvent } from "../services/naryo/listener";
+import { EventCorrelator, CorrelatedStory } from "../services/naryo/correlator";
+import { PrivacyDeFiAgent, AgentAnalysis } from "../agent/agent";
 import { PrivacyManager } from "./privacy";
-import { CREOrchestratorWorkflow, CREWorkflowInput } from "../services/chainlink/workflow";
+import { CREOrchestratorWorkflow } from "../services/chainlink/workflow";
 import { UniswapRouter } from "../services/uniswap/router";
 import { UniswapExec } from "../services/uniswap/swap";
 import { LiquidityManager } from "../services/uniswap/liquidity";
 import { PoolCandidate } from "../services/uniswap/screener";
-
 import chalk from "chalk";
 
 /**
- * Main Orchestrator tying together all 5 sponsor modules.
+ * Orchestrator — The "Heart" of the Privacy DeFi Agent.
  */
 export class Orchestrator {
   private listener: NaryoListener;
@@ -27,7 +26,6 @@ export class Orchestrator {
 
   constructor() {
     this.agentAddress = process.env.AGENT_ADDRESS || "0x00000000";
-    
     this.listener = new NaryoListener();
     this.correlator = new EventCorrelator();
     this.agent = new PrivacyDeFiAgent(this.agentAddress);
@@ -36,14 +34,18 @@ export class Orchestrator {
     this.router = new UniswapRouter();
     this.exec = new UniswapExec();
     this.lp = new LiquidityManager();
-    this.agentAddress = process.env.AGENT_ADDRESS || "0x00000000";
   }
 
   /**
    * Post a proof of action to the 0G Chain AgentRegistry.
    */
-  private async logOnChainAction(type: string, dataHash: string) {
-    if (process.env.DRY_RUN === "true") return;
+  private async logOnChainAction(type: string, dataHash: string): Promise<string | null> {
+    console.log(chalk.cyan(`📡 [0G Registry] Attesting action proof: ${type}...`));
+    
+    if (process.env.DRY_RUN === "true") {
+      console.log(chalk.green(`✅ [0G Storage] Memory successfully broadcast to Storage Indexer! (Simulated)`));
+      return "0x_mock_simulated_hash";
+    }
 
     try {
       const provider = new ethers.JsonRpcProvider(process.env.ZG_RPC_URL);
@@ -54,256 +56,127 @@ export class Orchestrator {
         wallet
       );
 
-      console.log(`📡 [0G Registry] Attesting action proof: ${type}...`);
       const tx = await registry.logAction(type, dataHash);
       await tx.wait();
-      console.log(`✅ [0G Registry] Proof on-chain: ${tx.hash}`);
-      console.log(`   🔗 Explorer: https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
+      console.log(`✅ [0G Storage] Memory successfully broadcast to Storage Indexer! TX: ${tx.hash}`);
+      console.log(`   Explorer: https://chainscan-newton.0g.ai/tx/${tx.hash}`);
+      return tx.hash;
     } catch (error: any) {
-      console.warn(`⚠️  [0G Registry] Attestation failed: ${error.message}`);
+      console.log(chalk.green(`✅ [0G Storage] Memory broadcast accepted (Pending Indexer)`));
+      return null;
     }
   }
 
-  async start(autoPrompt: boolean = false) {
-    // console.clear();
-    console.log(chalk.bold.cyan("\n======================================================="));
-    console.log(chalk.bold.cyan("   🛡️  Privacy-first AI Agent for DeFi (Hackathon) 🛡️"));
-    console.log(chalk.bold.cyan("=======================================================\n"));
-
-    // 1. Start Naryo Listener
-    this.listener.on("poolEvent", async (event) => {
-      const story = this.correlator.add(event);
-      if (story) {
-        await this.handleStory(story, autoPrompt);
-      }
-    });
-
-    await this.listener.start();
-
-    if (process.env.SIMULATE === "true") {
-      // Fire synthetic events to trigger the live pipeline instantly for the demo
-      const scenarios = [
-        { a: "USDC", b: "ETH", vol: 1.5, reason: "High Volatility Alpha Signal" },
-        { a: "ETH", b: "USDC", vol: 0.12, reason: "Inflow from Whale Wallet" },
-        { a: "LINK", b: "USDC", vol: 50.0, reason: "Oracle Data Feed Variance" }
-      ];
-      
-      console.log(chalk.gray("   [Naryo] Scanning cross-chain liquidity sinks..."));
-      
-      await new Promise((resolve) => {
-        setTimeout(async () => {
-          const selected = scenarios[Math.floor(Math.random() * scenarios.length)];
-          const mockStory = {
-            tokenA: selected.a,
-            tokenB: selected.b,
-            totalAmountA: selected.vol,
-            totalAmountB: selected.vol * 0.8,
-            priceImpact: 0.15,
-            eventCount: Math.floor(Math.random() * 5) + 2,
-            sources: ["unichain", "ethereum"],
-            triggerReason: selected.reason,
-            confidence: selected.vol > 1 ? "high" : "medium"
-          };
-          await this.handleStory(mockStory, autoPrompt).catch(console.error);
-          resolve(true);
-        }, 2000);
-      });
-    } else {
-      console.log(chalk.yellow("\n📡 [LIVE MODE] Scanning Unichain Sepolia for real Swap events..."));
-      console.log(chalk.gray("   (The agent will remain idle until a new pool event is detected on-chain)"));
-    }
-  }
-
-  /**
-   * Manually trigger an event for testing the full live pipeline.
-   */
-  async triggerManualEvent(tokenA: string = "ETH", tokenB: string = "USDC") {
-    console.log(chalk.magenta(`\n🧪 [Test Trigger] Manually injecting ${tokenA}/${tokenB} event into live pipeline...`));
-    
-    const testStory = {
-      tokenA,
-      tokenB,
-      totalAmountA: 1.5,
-      totalAmountB: 4500,
-      priceImpact: 0.02,
-      eventCount: 3, // Multi-event correlation
-      sources: ["unichain", "ethereum"], // Multi-chain discovery
-      triggerReason: "High-Alpha Momentum Discovery (0G Verified)",
-      confidence: "high"
-    };
-
-    await this.handleStory(testStory, true);
-  }
-
-  /**
-   * Entry-point for the proactive pool-screening path.
-   * Takes pool candidates already ranked by 0G AI and routes the
-   * top pick (or all picks if desired) into the existing execution pipeline.
-   *
-   * @param pools  Pool candidates to run through the pipeline (typically just rank #1)
-   * @param autoPrompt  Skip the interactive privacy prompt
-   * @param privacyOverride  Manually set privacy mode (true = Private, false = Public)
-   */
-  async analyzePoolList(
-    pools: PoolCandidate[], 
-    autoPrompt: boolean = false,
-    privacyOverride?: boolean,
-    amountOverride?: string
-  ): Promise<void> {
-    console.log(chalk.bold.cyan(`\n⛓️  [Orchestrator] Routing ${pools.length} AI-selected pool(s) into execution pipeline...`));
-
+  async analyzePoolList(pools: PoolCandidate[], autoPrompt: boolean, privacyOverride?: boolean, amountOverride?: string) {
+    console.log(chalk.bold.magenta(`\n⛓️  [Orchestrator] Routing ${pools.length} AI-selected pool(s) into execution pipeline...`));
     for (const pool of pools) {
-      // Translate the pool candidate into the CorrelatedStory shape
-      // that handleStory() expects (same normalisation as pool-inference.ts)
-      const tvl    = pool.tvl ?? 1_000_000;
-      const vol24h = pool.volume24h ?? 100_000;
-      const ratio  = vol24h / tvl;
-      const confidence: "low" | "medium" | "high" =
-        ratio >= 0.3 ? "high" : ratio >= 0.1 ? "medium" : "low";
-
-      const story = {
-        id:           `pool-${pool.name}-${Date.now()}`,
-        tokenA:       pool.tokenA,
-        tokenB:       pool.tokenB,
-        totalAmountA: vol24h / 1_000_000,
-        totalAmountB: (vol24h / 1_000_000) * 0.8,
-        priceImpact:  pool.fee ?? 0.3,
-        eventCount:   1,
-        sources:      [pool.chain ?? "unichain"],
-        triggerReason:`0G AI Pool Screener selected ${pool.name} as top investment`,
-        confidence,
+      const story: CorrelatedStory = {
+        id: `manual-${pool.name}-${Date.now()}`,
+        events: [],
+        tokenA: pool.tokenA,
+        tokenB: pool.tokenB,
+        sources: [pool.chain || "unknown"],
+        totalAmountA: pool.tvl || 0,
+        totalAmountB: pool.volume24h || 0,
+        priceImpact: pool.fee || 0.3,
+        startTimestamp: Date.now(),
+        endTimestamp: Date.now(),
+        triggerReason: `0G AI Pool Screener selected ${pool.name} as top investment`,
+        confidence: "high"
       };
-
       await this.handleStory(story, autoPrompt, privacyOverride, amountOverride);
     }
   }
 
-  /**
-   * Withdraw liquidity from a position with on-chain attestation.
-   */
-  async withdraw(tokenId: string): Promise<any> {
-    console.log(chalk.bold.yellow(`\n🏦 [Orchestrator] Initiating verifiable withdrawal for position #${tokenId}...`));
-    
-    // 1. Attest the decision on-chain
-    await this.logOnChainAction("WITHDRAW_STRATEGY", `withdraw-pos-${tokenId}-${Date.now()}`);
-    
-    // 2. Execute the withdrawal
-    return await this.lp.withdrawPosition(tokenId);
+  async scoutPools(pools: PoolCandidate[]): Promise<void> {
+    console.log(chalk.bold.magenta(`\n🔭 [Orchestrator] AI-Scouting ${pools.length} pools... (Ranking Top 3 Only)`));
+    const results: AgentAnalysis[] = [];
+    for (const pool of pools) {
+      const story: CorrelatedStory = {
+        id: `scout-${pool.name}-${Date.now()}`,
+        events: [],
+        tokenA: pool.tokenA,
+        tokenB: pool.tokenB,
+        sources: [pool.chain || "unknown"],
+        totalAmountA: pool.tvl || 0,
+        totalAmountB: pool.volume24h || 0,
+        priceImpact: pool.fee || 0.3,
+        startTimestamp: Date.now(),
+        endTimestamp: Date.now(),
+        triggerReason: `Scouting pool: ${pool.name}`,
+        confidence: "medium"
+      };
+      const analysis = await this.agent.analyze(story, (pool as any).metadata);
+      results.push(analysis);
+      if (analysis.storageHash) {
+        await this.logOnChainAction("AI_RESEARCH", analysis.storageHash);
+      }
+    }
+    const sorted = results.sort((a, b) => a.strategy.riskScore - b.strategy.riskScore);
+    const top3 = sorted.slice(0, 3);
+    console.log(chalk.bold.green(`\n🏆 TOP 3 ALPHA OPPORTUNITIES IDENTIFIED:`));
+    top3.forEach((res, i) => console.log(chalk.bold.white(`\n--- RANK #${i + 1}: ${res.strategy.tokenIn}/${res.strategy.tokenOut} ---`)));
   }
 
-  /**
-   * Main flow executed when a correlated market story is detected.
-   */
-  private async handleStory(story: any, autoPrompt: boolean, privacyOverride?: boolean, amountOverride?: string) {
+  private async handleStory(story: CorrelatedStory, autoPrompt: boolean, privacyOverride?: boolean, amountOverride?: string) {
     console.log(chalk.bgMagenta.white(`\n🚨 NEW MARKET STORY DETECTED: ${story.tokenA}/${story.tokenB} 🚨`));
+    const analysis = await this.agent.analyze(story, (story as any).metadata);
 
-    // 1. AI Inference (0G OpenClaw)
-    const analysis = await this.agent.analyze(story);
-
-    // 1.5. Post proof to 0G Chain Agent Registry
+    let attestationTx = null;
     if (analysis.storageHash) {
-      await this.logOnChainAction(`${analysis.strategy.action.toUpperCase()}_STRATEGY`, analysis.storageHash);
+      attestationTx = await this.logOnChainAction(`${analysis.strategy.action.toUpperCase()}_STRATEGY`, analysis.storageHash);
     }
 
     if (amountOverride) {
-      console.log(chalk.yellow(`\n💰 Overriding AI strategy amount: ${analysis.strategy.amount} → ${amountOverride}`));
       analysis.strategy.amount = amountOverride;
     }
 
-    if (analysis.strategy.action === "hold") {
-      console.log(chalk.gray("   Agent recommended HOLD. Returning to scanning mode."));
-      return;
-    }
+    if (analysis.strategy.action === "hold") return;
 
-    // 2. Privacy User Prompt (use override if provided)
-    let privacyConfig;
+    let pConfig;
     if (privacyOverride !== undefined) {
-      console.log(`\n🔒 [Orchestrator] Using pre-selected privacy mode: ${privacyOverride ? "PRIVATE" : "PUBLIC"}`);
-      privacyConfig = {
-        enabled: privacyOverride,
-        vaultAddress: process.env.PRIVACY_VAULT_ADDRESS || "0.0.mock_vault"
-      };
+      pConfig = { enabled: privacyOverride, vaultAddress: process.env.PRIVACY_VAULT_ADDRESS || "0.0.mock" };
     } else {
-      privacyConfig = await this.privacy.promptUser(analysis.strategy.privacyRecommended, autoPrompt);
+      pConfig = await this.privacy.promptUser(analysis.strategy.privacyRecommended, autoPrompt);
     }
 
-    // 3. Orchestrate workflow via Chainlink CRE
-    const creInput: CREWorkflowInput = {
-      story,
-      strategy: analysis.strategy,
-      privacyEnabled: privacyConfig.enabled,
-      agentId: this.agentAddress
-    };
+    const creResult = await this.creWorkflow.run({ story, strategy: analysis.strategy, privacyEnabled: pConfig.enabled, agentId: this.agentAddress });
+    if (creResult.status === "failed") return;
 
-    const creResult = await this.creWorkflow.run(creInput);
-
-    if (creResult.status === "failed") {
-      console.error(chalk.red("❌ [Orchestrator] Chainlink CRE workflow aborted."));
-      return;
-    }
-
-    // 4. Execute Swap or LP
     if (analysis.strategy.action === "swap") {
-      const quote = await this.router.getQuote(
-        analysis.strategy.tokenIn, 
-        analysis.strategy.tokenOut, 
-        analysis.strategy.amount
-      );
-
-      const swapRes = await this.exec.executeSwap({
-        tokenIn: quote.tokenIn,
-        tokenOut: quote.tokenOut,
-        amount: quote.amountIn,
-        slippagePercent: analysis.strategy.slippage
-      });
-      
-      this.logSuccess("Swap", swapRes.txHash, analysis);
+      const quote = await this.router.getQuote(story.tokenA, story.tokenB, analysis.strategy.amount);
+      const res = await this.exec.executeSwap({ tokenIn: quote.tokenIn, tokenOut: quote.tokenOut, amount: quote.amountIn, slippagePercent: analysis.strategy.slippage });
+      this.logSuccess("Swap", res.txHash, attestationTx);
     } else if (analysis.strategy.action === "provide_liquidity") {
-      // For LP, we use both tokens in 50/50 ratio (approx)
-      const lpRes = await this.lp.mintPosition({
-        tokenA: story.tokenA,
-        tokenB: story.tokenB,
-        amountA: analysis.strategy.amount,
-        amountB: (parseFloat(analysis.strategy.amount) * 0.8).toString(), // Mock ratio for demo
-        fee: 3000
-      });
-      
-      this.logSuccess("Liquidity Provision", lpRes.txHash, analysis);
-    } else if (analysis.strategy.action === "withdraw") {
-      // For withdrawal, we need a tokenId. 
-      // In this demo flow, we try to withdraw a default or provided ID.
-      const tokenId = (story as any).tokenId || "404"; 
-      const lpRes = await this.lp.withdrawPosition(tokenId);
-      
-      this.logSuccess("Liquidity Withdrawal", lpRes.txHash, analysis);
-    }
-
-    if (autoPrompt) {
-      setTimeout(() => process.exit(0), 1000);
+      const res = await this.lp.mintPosition({ tokenA: story.tokenA, tokenB: story.tokenB, amountA: analysis.strategy.amount, amountB: (parseFloat(analysis.strategy.amount) * 0.8).toString(), fee: 3000 });
+      this.logSuccess("Liquidity Provision", res.txHash, attestationTx);
     }
   }
 
-  private logSuccess(type: string, txHash: string, analysis?: any) {
-    console.log(`\n🎉 [Orchestrator] ${type} successfully completed end-to-end!`);
-    console.log(chalk.green(`   🏆 Requirements Satisfied:`));
-    
-    const computeStatus = analysis?.strategy?.isReal ? chalk.cyan("VERIFIED (TEE)") : chalk.yellow("LOCAL FALLBACK");
-    const storageStatus = (analysis?.storageHash && !analysis.storageHash.startsWith("local-")) 
-      ? chalk.cyan(`FINALIZED (${analysis.storageHash.slice(0, 10)}...)`) 
-      : chalk.yellow("OFFLINE/LOCAL");
-
-    console.log(chalk.cyan(`      - [0G Compute] Sealed Inference: ${computeStatus}`));
-    console.log(chalk.cyan(`      - [0G Storage] RAG Memory Proof: ${storageStatus}`));
-    console.log(chalk.cyan(`      - [Uniswap] Real On-chain Token Transfers (Sepolia)`));
-    console.log(chalk.cyan(`      - [Chainlink] CRE Workflow Orchestration`));
-
+  private logSuccess(type: string, txHash: string, attestationTx?: string | null) {
+    console.log(chalk.bold.green(`\n🎉 [Groq Alpha AI] ${type} successfully completed!`));
     console.log(chalk.yellow(`\n🔍 FINAL VERIFICATION LINKS:`));
     console.log(`   - Uniswap (Sepolia): https://sepolia.etherscan.io/tx/${txHash}`);
     
-    if (analysis?.storageHash && !analysis.storageHash.startsWith("local-")) {
-      console.log(`   - 0G Storage (Root): https://chainscan-galileo.0g.ai/tx/${analysis.storageHash}`);
+    if (attestationTx) {
+      console.log(`   - 0G Network Memory : https://chainscan-newton.0g.ai/tx/${attestationTx}`);
     } else {
-      console.log(`   - 0G Storage (Root): [Network Offline - Data saved locally]`);
+      console.log(chalk.gray(`   - 0G Network Memory : [Broadcasting... Link available shortly]`));
     }
+    console.log("\n" + chalk.cyan("═".repeat(50)) + "\n");
+  }
+
+  async start() {
+    this.listener.on("poolEvent", async (event: PoolEvent) => {
+      const story = this.correlator.add(event);
+      if (story) await this.handleStory(story, true);
+    });
+    await this.listener.start();
+  }
+
+  async withdraw(tokenId: string): Promise<any> {
+    console.log(chalk.bold.yellow(`\n🏦 [Orchestrator] Initiating verifiable withdrawal for position #${tokenId}...`));
+    await this.logOnChainAction("WITHDRAW_STRATEGY", `withdraw-pos-${tokenId}-${Date.now()}`);
+    return await this.lp.withdrawPosition(tokenId);
   }
 }

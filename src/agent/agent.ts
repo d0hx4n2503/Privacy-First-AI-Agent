@@ -2,6 +2,7 @@ import "dotenv/config";
 import { CorrelatedStory } from "../services/naryo/correlator";
 import { ZGInferenceClient, StrategyRecommendation } from "../services/zero-g/inference";
 import { ZGRAGMemory } from "../services/zero-g/storage";
+import chalk from "chalk";
 
 export interface AgentAnalysis {
   strategy: StrategyRecommendation;
@@ -32,26 +33,26 @@ export class PrivacyDeFiAgent {
    * Analyze a correlated market story and produce a strategy recommendation.
    * This is the main ACP `analyze` entry point.
    */
-  async analyze(story: CorrelatedStory): Promise<AgentAnalysis> {
-    console.log(`\n🤖 [OpenClaw] Agent ${this.agentId} analyzing story...`);
+  async analyze(story: CorrelatedStory, metadata?: any): Promise<AgentAnalysis> {
+    console.log(`\n🧠 [Groq Alpha AI] Analyzing market narrative...`);
     console.log(
-      `   Pair: ${story.tokenA}/${story.tokenB} | Sources: ${story.sources.join(", ")}`
+      `   Pair: ${chalk.bold(story.tokenA)}/${chalk.bold(story.tokenB)} | Network: ${story.sources.join(", ")}`
     );
-    console.log(`   Reason: ${story.triggerReason}`);
 
     // 1. Retrieve relevant past decisions from RAG memory
     const context = await this.memory.retrieve(
       `${story.tokenA} ${story.tokenB} DeFi strategy`
     );
 
-    // 2. Call 0G Sealed Inference
+    // 2. Call AI Inference
     const strategy = await this.inference.reason({
       story,
       historicalContext: context,
       agentId: this.agentId,
+      metadata,
     });
 
-    // 3. Save this analysis to persistent memory
+    // 3. Save this analysis to persistent memory (Quiet mode)
     const storageHash = await this.memory.save({
       timestamp: Date.now(),
       story,
@@ -77,7 +78,7 @@ export class PrivacyDeFiAgent {
   identity() {
     return {
       agentId: this.agentId,
-      framework: "OpenClaw",
+      framework: "GroqAlpha",
       version: "1.0.0",
       capabilities: [
         "defi-strategy",
@@ -89,12 +90,17 @@ export class PrivacyDeFiAgent {
 
   private logAnalysis(analysis: AgentAnalysis): void {
     const { strategy } = analysis;
-    console.log(`\n📊 [OpenClaw] Strategy Recommendation:`);
-    console.log(`   Action   : ${strategy.action}`);
-    console.log(`   TokenIn  : ${strategy.tokenIn}`);
-    console.log(`   TokenOut : ${strategy.tokenOut}`);
-    console.log(`   Amount   : ${strategy.amount}`);
+    console.log(chalk.bold.cyan(`\n📊 [Groq Alpha AI] Strategic Analysis Result:`));
+    console.log(`   Action   : ${chalk.bold.yellow(strategy.action.toUpperCase())}`);
     console.log(`   Risk     : ${strategy.riskScore}/10`);
-    console.log(`   Reasoning: ${strategy.reasoning}`);
+    console.log(`   Summary  : ${strategy.reasoning}`);
+    
+    if (strategy.analysis_breakdown) {
+      console.log(chalk.gray(`\n   --- Deep Analysis Breakdown ---`));
+      console.log(`   🌐 Market Sentiment : ${strategy.analysis_breakdown.market_sentiment}`);
+      console.log(`   🧬 Technical Health : ${strategy.analysis_breakdown.technical_health}`);
+      console.log(`   💰 Yield Analysis    : ${strategy.analysis_breakdown.yield_analysis}`);
+      console.log(`   🛡️  Risk Mitigation  : ${strategy.analysis_breakdown.risk_mitigation}`);
+    }
   }
 }

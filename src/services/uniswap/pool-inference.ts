@@ -1,6 +1,7 @@
 import "dotenv/config";
 import axios from "axios";
 import { PoolCandidate } from "./screener";
+import { GroqService } from "../ai/groq";
 
 export interface AIPoolRanking {
   rank: number;
@@ -12,6 +13,12 @@ export interface AIPoolRanking {
   confidenceScore: number; // 0–100 (AI's own confidence in its ranking)
   expectedReturn: string;  // e.g. "+4.2%"
   reasoning: string;       // AI's explanation
+  analysis_breakdown?: {
+    market_sentiment: string;
+    technical_health: string;
+    yield_analysis: string;
+    risk_mitigation: string;
+  };
   warnings?: string;       // Optional red flags the AI spotted
 }
 
@@ -39,7 +46,10 @@ export class ZGPoolRankingClient {
   constructor() {
     this.computeUrl = process.env.ZG_COMPUTE_URL || "https://api-compute.0g.ai";
     this.dryRun = process.env.DRY_RUN === "true";
+    this.groqItems = new GroqService();
   }
+
+  private groqItems: GroqService;
 
   // ── Public API ─────────────────────────────────────────────────────
 
@@ -49,15 +59,13 @@ export class ZGPoolRankingClient {
    */
   async rankPools(pools: PoolCandidate[]): Promise<AIRankingResult> {
     if (this.dryRun) {
-      console.log("🎭 [0G Compute] DRY-RUN: Running local comparative analysis...");
-      return this.localFallback(pools);
+      return await this.localFallback(pools);
     }
-
-    console.log(`\n🔐 [0G Compute] Sending ${pools.length} pools for comparative sealed inference (TEE)...`);
 
     const prompt = this.buildComparativePrompt(pools);
 
     try {
+      // 0G Compute (TEE) comparative ranking
       const response = await axios.post(
         `${this.computeUrl}/v1/inference/sealed`,
         {
@@ -80,11 +88,11 @@ export class ZGPoolRankingClient {
       );
 
       console.log("✅ [0G Compute] Comparative sealed inference complete (TEE verified)");
-      return this.parseAIResponse(response.data, pools);
+      return await this.parseAIResponse(response.data, pools);
 
     } catch (error: any) {
-      console.warn(`⚠️  [0G Compute] Unreachable (${error.message}). Switching to local rule-based fallback...`);
-      const result = this.localFallback(pools);
+      console.warn(`⚠️  [0G Compute] Unreachable (${error.message}). Switching to local fallback...`);
+      const result = await this.localFallback(pools);
       result.usedFallback = true;
       return result;
     }
@@ -136,7 +144,13 @@ Respond STRICTLY in valid JSON format (no markdown, no explanation outside JSON)
       "riskScore": 2,
       "confidenceScore": 88,
       "expectedReturn": "+4.2%",
-      "reasoning": "[Why this pool is ranked here COMPARED TO the others]",
+      "reasoning": "[Brief summary]",
+      "analysis_breakdown": {
+        "market_sentiment": "mood summary",
+        "technical_health": "TVL/Vol analysis",
+        "yield_analysis": "APY vs Risk verdict",
+        "risk_mitigation": "how to protect capital"
+      },
       "warnings": "[Any red flags, or null]"
     },
     ... (one entry per pool)
@@ -147,7 +161,7 @@ Respond STRICTLY in valid JSON format (no markdown, no explanation outside JSON)
 
   // ── Response Parser ────────────────────────────────────────────────
 
-  private parseAIResponse(raw: any, pools: PoolCandidate[]): AIRankingResult {
+  private async parseAIResponse(raw: any, pools: PoolCandidate[]): Promise<AIRankingResult> {
     try {
       const content = typeof raw.result === "string" ? JSON.parse(raw.result) : raw.result;
       const rankings: AIPoolRanking[] = content.rankings;
@@ -161,7 +175,7 @@ Respond STRICTLY in valid JSON format (no markdown, no explanation outside JSON)
       };
     } catch {
       console.warn("⚠️  [0G Compute] Could not parse AI response. Using fallback...");
-      return this.localFallback(pools);
+      return await this.localFallback(pools);
     }
   }
 
@@ -172,7 +186,21 @@ Respond STRICTLY in valid JSON format (no markdown, no explanation outside JSON)
    * Applies transparent, deterministic scoring rules and clearly
    * labels the result as fallback so the consumer knows.
    */
-  private localFallback(pools: PoolCandidate[]): AIRankingResult {
+  private async localFallback(pools: PoolCandidate[]): Promise<AIRankingResult> {
+    if (process.env.GROQ_API_KEY) {
+      try {
+        const prompt = this.buildComparativePrompt(pools);
+        const result = await this.groqItems.generateJSON(prompt);
+        return {
+          rankings: result.rankings,
+          summary: `[GROQ-Skill] ${result.summary}`,
+          bestPool: result.rankings[0],
+          usedFallback: true
+        };
+      } catch (e: any) {
+        console.warn(`⚠️  GROQ fallback failed: ${e.message}.`);
+      }
+    }
     const scored = pools
       .map((pool) => {
         const tvl    = pool.tvl ?? 1;
