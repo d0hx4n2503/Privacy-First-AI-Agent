@@ -26,3 +26,5 @@ memory-*.json
 *.txt
 proof.json
 package-lock.json
+
+.env

@@ -18,6 +18,9 @@
     "test": "jest --passWithNoTests",
     "compile": "forge build",
     "deploy:0g": "wsl bash deploy.sh",
+    "deploy:vaults": "wsl bash deploy_vaults.sh",
+    "test:vaults": "wsl bash -c \"cd /mnt/c/Users/1BITLAB-PC/Desktop/Privacy-first\\ AI\\ Agent/AI\\ Agent && /home/bitlab-pc/.foundry/bin/forge test --match-contract SmartVaultsTest -vvv\"",
+    "deposit": "ts-node tools/deposit-vault.ts",
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {

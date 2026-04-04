@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "forge-std/Script.sol";
+import "src/StrategyVault.sol";
+import "src/PrivacyVault.sol";
+
+contract DeployVaults is Script {
+    function run() external {
+        uint256 pk = vm.envUint("TRADER_PRIVATE_KEY");
+        vm.startBroadcast(pk);
+        
+        StrategyVault strategyVault = new StrategyVault(0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008);
+        console.log("Deployed StrategyVault to:", address(strategyVault));
+        
+        vm.stopBroadcast();
+    }
+    
+    function runPrivacy() external {
+        uint256 pk = vm.envUint("ZG_PRIVATE_KEY");
+        vm.startBroadcast(pk);
+        
+        PrivacyVault privacyVault = new PrivacyVault();
+        console.log("Deployed PrivacyVault to:", address(privacyVault));
+        
+        vm.stopBroadcast();
+    }
+}

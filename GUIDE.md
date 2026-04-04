@@ -19,10 +19,10 @@ Toàn bộ logic của Agent hoạt động trong một vòng lặp sự kiện 
 3.  **Lớp Điều phối & Attestation (Orchestration Layer)**: `src/core/orchestrator.ts`
     - Chốt phương án đầu tư (INVEST/HOLD/WITHDRAW).
     - Ghi Proof (Hash của Reasoning) lên Smart Contract **0G Registry** qua hàm `logAction`.
-    - Trình bằng chứng lên mạng lưới 0G để công khai hóa quyết định của AI.
+    - Thực hiện **Commit & Link** trên **PrivacyVault** để bảo mật ý đồ chiến lược.
 4.  **Lớp Thực thi (Execution Layer)**: `src/services/uniswap/`
-    - `LiquidityManager`: Tính toán các thông số Tick/Price để cung cấp thanh khoản tối ưu (V3 NFT Position).
-    - `UniswapExec`: Thực hiện lệnh Swap để cân bằng rổ tài sản.
+    - `StrategyVault`: Thực hiện các lệnh DeFi phức tạp (ví dụ: Zap Liquidity) một cách nguyên tử.
+    - `UniswapExec`: Gọi hàm thực thi chiến lược thông qua Smart Vault để đảm bảo an toàn tài sản.
 
 ---
 
@@ -44,9 +44,14 @@ Toàn bộ logic của Agent hoạt động trong một vòng lặp sự kiện 
 
 ### ⛓ Chainlink CRE (Workflow Orchestrator)
 Dự án không gọi trực tiếp các lệnh DeFi mà đưa qua Chainlink Compute Runtime Environment (CRE).
-- **Vị trí**: `src/services/chainlink/workflow.ts` & `cre-config.yaml`.
-- **Logic**: CRE kiểm tra `Validate Input` (Lệnh có đúng từ Agent không?) -> `Price Check` (Giá Oracle có khớp giá AI không?) -> `Order Execution`.
-- **Giá trị**: Ngăn chặn AI bị hack hoặc ra lệnh đầu tư vào các token rác không có thanh khoản thực.
+- **Vị trí**: `src/services/chainlink/workflow.ts`.
+- **Logic**: CRE kiểm tra `Validate Input` -> `Chainlink Price Feed` (Xác thực giá Oracle trên Sepolia) -> `Privacy Route`.
+- **Giá trị**: Ngăn chặn AI ra lệnh đầu tư sai lệch so với giá thị trường thực tế.
+
+### 🏛️ Smart Strategy Vaults (Foundry Layer)
+Hệ thống sử dụng các Vault thông minh để tách biệt tài sản người dùng và logic của Agent:
+- **StrategyVault.sol**: Chứa logic "Zapper" (Swap + LP trong 1 TX) và các hàm bảo vệ (Withdraw Only Owner).
+- **PrivacyVault.sol**: Lưu trữ cam kết chiến lược (Commitment) trước khi thực thi để bảo vệ quyền riêng tư.
 
 ---
 

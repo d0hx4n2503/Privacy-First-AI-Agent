@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { CorrelatedStory } from "../services/naryo/correlator";
 import { ZGInferenceClient, StrategyRecommendation } from "../services/zero-g/inference";
+export { StrategyRecommendation };
 import { ZGRAGMemory } from "../services/zero-g/storage";
 import chalk from "chalk";
 

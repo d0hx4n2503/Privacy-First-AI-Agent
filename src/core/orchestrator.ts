@@ -23,9 +23,13 @@ export class Orchestrator {
   private exec: UniswapExec;
   private lp: LiquidityManager;
   private agentAddress: string;
+  private strategyVaultAddress: string | undefined;
+  private privacyVaultAddress: string | undefined;
 
   constructor() {
     this.agentAddress = process.env.AGENT_ADDRESS || "0x00000000";
+    this.strategyVaultAddress = process.env.STRATEGY_VAULT_ADDRESS;
+    this.privacyVaultAddress = process.env.PRIVACY_VAULT_ADDRESS;
     this.listener = new NaryoListener();
     this.correlator = new EventCorrelator();
     this.agent = new PrivacyDeFiAgent(this.agentAddress);
@@ -145,11 +149,83 @@ export class Orchestrator {
 
     if (analysis.strategy.action === "swap") {
       const quote = await this.router.getQuote(story.tokenA, story.tokenB, analysis.strategy.amount);
-      const res = await this.exec.executeSwap({ tokenIn: quote.tokenIn, tokenOut: quote.tokenOut, amount: quote.amountIn, slippagePercent: analysis.strategy.slippage });
-      this.logSuccess("Swap", res.txHash, attestationTx);
+      
+      // 4. Execute (Vault vs Direct)
+      let txHash: string | undefined;
+      if (this.strategyVaultAddress) {
+        console.log(chalk.magenta(`🏛️  [StrategyVault] Executing strategy through Smart Vault at ${this.strategyVaultAddress}...`));
+        txHash = await this.exec.executeStrategyViaVault(this.strategyVaultAddress, analysis.strategy);
+      } else {
+        const res = await this.exec.executeSwap({ tokenIn: quote.tokenIn, tokenOut: quote.tokenOut, amount: quote.amountIn, slippagePercent: analysis.strategy.slippage });
+        txHash = res.txHash;
+      }
+
+      // 5. Post-Execution Privacy Linking
+      if (pConfig.enabled && txHash && this.privacyVaultAddress) {
+        console.log(chalk.cyan(`📡 [PrivacyVault] Linking execution TX to commitment hash...`));
+        await this.logToPrivacyVault(analysis.strategy, txHash);
+      }
+
+      this.logSuccess("Swap", txHash || "0x0", attestationTx);
     } else if (analysis.strategy.action === "provide_liquidity") {
-      const res = await this.lp.mintPosition({ tokenA: story.tokenA, tokenB: story.tokenB, amountA: analysis.strategy.amount, amountB: (parseFloat(analysis.strategy.amount) * 0.8).toString(), fee: 3000 });
-      this.logSuccess("Liquidity Provision", res.txHash, attestationTx);
+      let txHash: string | undefined;
+
+      if (this.strategyVaultAddress) {
+        console.log(chalk.magenta(`🏛️  [StrategyVault] Executing Liquidity Strategy via Smart Vault at ${this.strategyVaultAddress}...`));
+        txHash = await this.exec.executeStrategyViaVault(this.strategyVaultAddress, analysis.strategy);
+      } else {
+        const res = await this.lp.mintPosition({ 
+          tokenA: story.tokenA, 
+          tokenB: story.tokenB, 
+          amountA: analysis.strategy.amount, 
+          amountB: (parseFloat(analysis.strategy.amount) * 0.8).toString(), 
+          fee: 3000 
+        });
+        txHash = res.txHash;
+      }
+      
+      if (pConfig.enabled && txHash && this.privacyVaultAddress) {
+        console.log(chalk.cyan(`📡 [PrivacyVault] Linking execution TX to commitment hash...`));
+        await this.logToPrivacyVault(analysis.strategy, txHash);
+      }
+      
+      this.logSuccess("Liquidity Provision", txHash || "0x0", attestationTx);
+    }
+  }
+
+  private async logToPrivacyVault(strategy: any, txHash: string) {
+    if (!this.privacyVaultAddress) return;
+    
+    try {
+      const provider = new ethers.JsonRpcProvider(process.env.ZG_RPC_URL);
+      const wallet = new ethers.Wallet(process.env.ZG_PRIVATE_KEY!, provider);
+      
+      const vaultAbi = [
+        "function commitStrategy(bytes32 commitmentHash, string calldata strategyUri, bool isPrivate) external",
+        "function linkExecution(bytes32 commitmentHash, string calldata txHash) external",
+        "function strategies(bytes32) external view returns (address agent, bytes32 commitmentHash, string strategyUri, bool isPrivate, uint256 timestamp, string txExecuted)"
+      ];
+      
+      const vault = new ethers.Contract(this.privacyVaultAddress, vaultAbi, wallet);
+      const commitment = ethers.keccak256(ethers.toUtf8Bytes(JSON.stringify(strategy)));
+
+      // 1. Check if already committed
+      const record = await vault.strategies(commitment);
+      if (record.agent === ethers.ZeroAddress) {
+        console.log(chalk.gray(`   📡 Committing strategy to PrivacyVault...`));
+        const commitTx = await vault.commitStrategy(commitment, "", true);
+        await commitTx.wait();
+      }
+
+      // 2. Link execution
+      console.log(chalk.gray(`   📡 Linking execution hash to PrivacyVault...`));
+      const linkTx = await vault.linkExecution(commitment, txHash);
+      await linkTx.wait();
+
+      console.log(chalk.cyan(`   ✅ Privacy Link Verified! 0G TX: ${linkTx.hash}`));
+      console.log(chalk.gray(`   Explorer: https://chainscan-newton.0g.ai/tx/${linkTx.hash}`));
+    } catch (e: any) {
+      console.error(chalk.red(`   ❌ Failed to link to PrivacyVault: ${e.message}`));
     }
   }
 
