@@ -2,8 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/StrategyVault.sol";
-import "../src/PrivacyVault.sol";
+import "../src/contracts/StrategyVault.sol";
+import "../src/contracts/PrivacyVault.sol";
 
 contract SmartVaultsTest is Test {
     StrategyVault public strategyVault;

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/StrategyVault.sol";
+import "../src/contracts/StrategyVault.sol";
 
 contract StrategyVaultTest is Test {
     StrategyVault public vault;

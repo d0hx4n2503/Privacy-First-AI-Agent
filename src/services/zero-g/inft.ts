@@ -75,30 +75,33 @@ export class iNFTMinter {
       console.log(`🎨 [iNFT] Minting ERC-7857 Agent Identity...`);
 
       const contract = new ethers.Contract(contractAddress, INFT_ABI, this.signer);
-      
+
       // Create On-Chain ERC-721 Metadata with SVG Emoji
       const emoji = metadata.framework.toLowerCase().includes("ghost") ? "👻" : "🤖";
+      const modelName = (metadata.modelAI || "Standard-LLM").toUpperCase();
       const svgImage = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" style="background:linear-gradient(135deg, #111, #333);border-radius:20px;">
         <text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-size="150">${emoji}</text>
-        <text x="50%" y="75%" dominant-baseline="middle" text-anchor="middle" font-size="24" fill="#00ffcc" font-family="monospace" font-weight="bold">${metadata.framework} Agent</text>
+        <text x="50%" y="75%" dominant-baseline="middle" text-anchor="middle" font-size="24" fill="#00ffcc" font-family="monospace" font-weight="bold">${modelName} Agent</text>
         <text x="50%" y="85%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="#aaa" font-family="sans-serif">Privacy-First AI (ERC-7857)</text>
       </svg>`;
       const base64Svg = "data:image/svg+xml;base64," + Buffer.from(svgImage).toString("base64");
 
       const inftJson = {
-        name: `${metadata.framework} iNFT Agent`,
-        description: "Autonomous Privacy-First AI Agent operating on 0G Network",
+        name: `${modelName} Agent #${Math.floor(Math.random() * 1000)}`,
+        description: `Autonomous DeFi Strategy Agent powered by ${modelName}. Identity registered on 0G Chain.`,
         image: base64Svg,
+        image_data: svgImage,
         attributes: [
           { trait_type: "Framework", value: metadata.framework },
-          { trait_type: "Capabilities", value: metadata.capabilities.join(", ") },
-          { trait_type: "Creation Date", value: metadata.createdAt },
-          { trait_type: "Storage", value: metadata.storageUri || "0G Storage" }
+          { trait_type: "Model", value: metadata.modelAI || "Standard" },
+          { trait_type: "Capabilities", value: (metadata.capabilities || []).join(", ") },
+          { trait_type: "Resource", value: metadata.resource || "0G Compute" },
+          { trait_type: "Created At", value: new Date(metadata.createdAt || Date.now()).toLocaleDateString() }
         ]
       };
 
       const finalUri = "data:application/json;base64," + Buffer.from(JSON.stringify(inftJson)).toString("base64");
-      
+
       const encryptedUri = finalUri;
       const metadataHash = ethers.keccak256(ethers.toUtf8Bytes(encryptedUri));
       const ownerAddress = await this.signer.getAddress();
@@ -108,33 +111,36 @@ export class iNFTMinter {
 
       if (process.env.AGENT_REGISTRY_ADDRESS) {
         const regAddr = ethers.getAddress(process.env.AGENT_REGISTRY_ADDRESS);
-        console.log(`📝 [Registry] 1-Click Minting & Registering address ${ownerAddress}...`);
+        console.log(`📝 [Registry] 1-Click Minting & Registering for ${ownerAddress}...`);
+        console.log(`📡 iNFT contract: ${contractAddress} | Registry: ${regAddr}`);
+        console.log(`📡 Metadata hash: ${metadataHash} | Encrypted URI length: ${encryptedUri.length} chars`);
+        console.log(`📡 URI Prefix: ${encryptedUri.substring(0, 100)}...`);
         const registry = new ethers.Contract(regAddr, REGISTRY_ABI, this.signer);
-        
+
         try {
-            const tx = await registry.mintAndRegister(contractAddress, encryptedUri, metadataHash, true);
-            const receipt = await tx.wait();
-            receiptHash = receipt.hash;
-            
-            const registerEvent = receipt.logs
-              .map((log: ethers.Log) => {
-                try { return registry.interface.parseLog(log); } catch { return null; }
-              })
-              .find((e: ethers.LogDescription | null) => e?.name === "AgentRegistered");
-              
-            if (registerEvent && registerEvent.args && registerEvent.args.tokenId) {
-                tokenId = registerEvent.args.tokenId.toString();
-            }
-            console.log(`✅ [Registry+iNFT] Factory Success! Token ID #${tokenId} automatically linked! | Tx: ${receiptHash}`);
+          const tx = await registry.mintAndRegister(contractAddress, encryptedUri, metadataHash, true);
+          const receipt = await tx.wait();
+          receiptHash = receipt.hash;
+
+          const registerEvent = receipt.logs
+            .map((log: ethers.Log) => {
+              try { return registry.interface.parseLog(log); } catch { return null; }
+            })
+            .find((e: ethers.LogDescription | null) => e?.name === "AgentRegistered");
+
+          if (registerEvent && registerEvent.args && registerEvent.args.tokenId) {
+            tokenId = registerEvent.args.tokenId.toString();
+          }
+          console.log(`✅ [Registry+iNFT] Factory Success! Token ID #${tokenId} automatically linked! | Tx: ${receiptHash}`);
         } catch (e: any) {
-            console.warn(`⚠️  [Registry] Failed to link via Factory. Error: ${e.message}`);
+          console.warn(`⚠️  [Registry] Failed to link via Factory. Error: ${e.message}`);
         }
       } else {
         console.warn("⚠️  No REGISTRY address. Falling back to simple mint.");
         const tx = await contract.mint(ownerAddress, encryptedUri, metadataHash);
         const receipt = await tx.wait();
         receiptHash = receipt.hash;
-        
+
         const transferEvent = receipt.logs
           .map((log: ethers.Log) => {
             try { return contract.interface.parseLog(log); } catch { return null; }
@@ -165,7 +171,7 @@ export class iNFTMinter {
       updateRegex("MY_AGENT_INFT_ID", tokenId);
       updateRegex("AGENT_ADDRESS", ownerAddress);
       fs.writeFileSync(envPath, envContent.trim() + "\n");
-    } catch (err) {}
+    } catch (err) { }
   }
 
   private mockMint(metadata: iNFTMetadata, contractAddress: string): iNFTResult {

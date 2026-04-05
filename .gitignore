@@ -4,6 +4,8 @@ cache/
 broadcast/
 lib/
 out_deploy/
+CUserspc/
+minter_env/
 
 # TypeScript / Node
 node_modules/
