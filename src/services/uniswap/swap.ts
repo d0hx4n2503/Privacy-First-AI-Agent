@@ -25,18 +25,28 @@ export class UniswapExec {
       const amountEth = ethers.parseEther(strategy.amount || "0.001");
 
       const vaultAbi = [
-        "function executeV2Swap(address tokenOut, uint256 amountEth, uint256 minAmountOut) external",
-        "function executeV2ZapLiquidity(address token, uint256 amountEthTotal) external"
+        "function ethBalances(address) view returns(uint256)",
+        "function deposit() external payable",
+        "function executeV2Swap(address user, address tokenOut, uint256 amountEth, uint256 minAmountOut) external",
+        "function executeV2ZapLiquidity(address user, address token, uint256 amountEthTotal) external"
       ];
       const vaultContract = new ethers.Contract(vaultAddress, vaultAbi, this.signer);
+
+      const user = await this.signer.getAddress();
+      const vaultBal = await vaultContract.ethBalances(user);
+      if (vaultBal < amountEth) {
+        console.log(chalk.yellow(`   💡 Auto-depositing ${ethers.formatEther(amountEth - vaultBal)} ETH to Vault...`));
+        const depositTx = await vaultContract.deposit({ value: amountEth - vaultBal });
+        await depositTx.wait();
+      }
 
       let tx;
       if (strategy.action === "swap") {
         console.log(chalk.yellow(`📡 [StrategyVault] Routing Swap: ${strategy.amount} ETH (Vault) → USDC...`));
-        tx = await vaultContract.executeV2Swap(this.USDC, amountEth, 0);
+        tx = await vaultContract.executeV2Swap(user, this.USDC, amountEth, 0);
       } else {
         console.log(chalk.yellow(`📡 [StrategyVault] Routing ZAP Liquidity: ${strategy.amount} ETH (Vault Only) → Half Swap → LP...`));
-        tx = await vaultContract.executeV2ZapLiquidity(this.USDC, amountEth);
+        tx = await vaultContract.executeV2ZapLiquidity(user, this.USDC, amountEth);
       }
 
       console.log(chalk.gray(`   ⏳ Broadcasting Zapper transaction to Sepolia...`));

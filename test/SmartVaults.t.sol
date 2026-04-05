@@ -31,7 +31,9 @@ contract SmartVaultsTest is Test {
         // Wait, StrategyVault doesn't have a setOperator function, but it sets it in constructor
         vm.stopPrank();
 
-        vm.deal(address(strategyVault), 10 ether);
+        vm.deal(owner, 10 ether);
+        vm.prank(owner);
+        strategyVault.deposit{value: 10 ether}();
     }
 
     // --- StrategyVault Tests ---
@@ -42,7 +44,7 @@ contract SmartVaultsTest is Test {
         uint256 initBalance = address(strategyVault).balance;
         uint256 amount = 0.01 ether;
         
-        strategyVault.executeV2ZapLiquidity(USDC, amount);
+        strategyVault.executeV2ZapLiquidity(owner, USDC, amount);
         
         // Final balance should be around initBalance - amount (could be slightly more if ETH returned)
         assertGe(address(strategyVault).balance, initBalance - amount);
@@ -59,7 +61,7 @@ contract SmartVaultsTest is Test {
         vm.startPrank(owner);
         
         uint256 amount = 0.01 ether;
-        strategyVault.executeV2Swap(USDC, amount, 0);
+        strategyVault.executeV2Swap(owner, USDC, amount, 0);
         
         uint256 usdcBalance = IERC20(USDC).balanceOf(address(strategyVault));
         assertGt(usdcBalance, 0);
@@ -71,7 +73,7 @@ contract SmartVaultsTest is Test {
         vm.startPrank(stranger);
         uint256 amount = 0.01 ether;
         vm.expectRevert("Only operator");
-        strategyVault.executeV2Swap(USDC, amount, 0);
+        strategyVault.executeV2Swap(owner, USDC, amount, 0);
         vm.stopPrank();
     }
 

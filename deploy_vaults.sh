@@ -2,7 +2,7 @@
 # ── Dọn dẹp môi trường ──
 sed -i 's/\r$//' .env
 source .env
-FORGE_BIN="/home/bitlab-pc/.foundry/bin/forge"
+FORGE_BIN="/home/pc/.foundry/bin/forge"
 
 echo "🚀 Bắt đầu Triển khai TOÀN BỘ (Sử dụng Forge Script + Broadcast)..."
 

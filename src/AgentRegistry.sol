@@ -6,30 +6,35 @@ pragma solidity ^0.8.20;
  * @notice Registers AI Agents with their on-chain iNFT identities for verifiable attestation.
  *         Deployed on 0G Chain.
  */
+interface IINFT {
+    function mint(address to, string calldata encryptedUri, bytes32 metadataHash) external returns (uint256);
+}
+
 contract AgentRegistry {
     struct AgentInfo {
         address owner;
-        string inftTokenId;       // ERC-7857 iNFT token ID on 0G Chain
+        uint256 inftTokenId;      // ERC-7857 iNFT token ID on 0G Chain
         string metadata;          // Storage URI (may be encrypted as per ERC-7857)
         bool privacyEnabled;      // Whether agent runs in privacy mode by default
         uint256 registeredAt;
     }
 
-    mapping(address => AgentInfo) public agents;
-    address[] public agentList;
+    mapping(uint256 => AgentInfo) public agents;
+    uint256[] public registeredTokens;
     address public owner;
 
-    event AgentRegistered(address indexed agentAddress, string inftTokenId, bool privacyEnabled);
-    event PrivacyToggled(address indexed agentAddress, bool privacyEnabled);
-    event ActionLogged(address indexed agentAddress, string actionType, string dataHash);
+    event AgentRegistered(uint256 indexed tokenId, address indexed owner, bool privacyEnabled);
+    event PrivacyToggled(uint256 indexed tokenId, bool privacyEnabled);
+    event ActionLogged(uint256 indexed tokenId, address indexed owner, string actionType, string dataHash);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner");
         _;
     }
 
-    modifier agentExists(address agentAddr) {
-        require(agents[agentAddr].registeredAt != 0, "Agent not registered");
+    modifier onlyAgentOwner(uint256 tokenId) {
+        require(agents[tokenId].registeredAt != 0, "Agent not registered");
+        require(agents[tokenId].owner == msg.sender, "Not owner");
         _;
     }
 
@@ -38,41 +43,48 @@ contract AgentRegistry {
     }
 
     /**
-     * @notice Register an agent with its iNFT identity.
+     * @notice Mint an iNFT and register the agent simultaneously (Factory Model).
+     * @param inftContract Address of the deployed INFT contract
+     * @param encryptedUri URI for the NFT
+     * @param metadataHash Hash for 7857 validation
+     * @param privacyEnabled Initial privacy setting
      */
-    function registerAgent(
-        string calldata inftTokenId,
-        string calldata metadata,
+    function mintAndRegister(
+        address inftContract,
+        string calldata encryptedUri,
+        bytes32 metadataHash,
         bool privacyEnabled
     ) external {
-        require(agents[msg.sender].registeredAt == 0, "Already registered");
+        uint256 tokenId = IINFT(inftContract).mint(msg.sender, encryptedUri, metadataHash);
 
-        agents[msg.sender] = AgentInfo({
+        require(agents[tokenId].registeredAt == 0, "Already registered");
+
+        agents[tokenId] = AgentInfo({
             owner: msg.sender,
-            inftTokenId: inftTokenId,
-            metadata: metadata,
+            inftTokenId: tokenId,
+            metadata: encryptedUri,
             privacyEnabled: privacyEnabled,
             registeredAt: block.timestamp
         });
 
-        agentList.push(msg.sender);
+        registeredTokens.push(tokenId);
 
-        emit AgentRegistered(msg.sender, inftTokenId, privacyEnabled);
+        emit AgentRegistered(tokenId, msg.sender, privacyEnabled);
     }
 
     /**
      * @notice Log atomic actions from the AI brain to the 0G Chain.
      */
-    function logAction(string calldata actionType, string calldata dataHash) external agentExists(msg.sender) {
-        emit ActionLogged(msg.sender, actionType, dataHash);
+    function logAction(uint256 tokenId, string calldata actionType, string calldata dataHash) external onlyAgentOwner(tokenId) {
+        emit ActionLogged(tokenId, msg.sender, actionType, dataHash);
     }
 
-    function togglePrivacy(bool enabled) external agentExists(msg.sender) {
-        agents[msg.sender].privacyEnabled = enabled;
-        emit PrivacyToggled(msg.sender, enabled);
+    function togglePrivacy(uint256 tokenId, bool enabled) external onlyAgentOwner(tokenId) {
+        agents[tokenId].privacyEnabled = enabled;
+        emit PrivacyToggled(tokenId, enabled);
     }
 
-    function getAgent(address agentAddr) external view returns (AgentInfo memory) {
-        return agents[agentAddr];
+    function getAgent(uint256 tokenId) external view returns (AgentInfo memory) {
+        return agents[tokenId];
     }
 }

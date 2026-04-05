@@ -6,18 +6,18 @@ async function verify() {
   
   // Use getAddress to normalize and catch any format errors early
   const registryAddress = ethers.getAddress(process.env.AGENT_REGISTRY_ADDRESS!);
-  const agentAddress = ethers.getAddress(process.env.AGENT_ADDRESS!);
+  const tokenId = process.env.MY_AGENT_INFT_ID || "1";
   
   console.log("=======================================================");
   console.log("   🛡️  ORION ON-CHAIN VERIFIER  — Proof of life on 0G Chain");
   console.log("=======================================================\n");
 
   console.log(`📡 [Verifier] Registry: ${registryAddress}`);
-  console.log(`📡 [Verifier] Agent   : ${agentAddress}\n`);
+  console.log(`📡 [Verifier] TokenID : ${tokenId}\n`);
 
   const abi = [
-    "function getAgent(address agentAddr) external view returns (tuple(address owner, string inftTokenId, string metadata, bool privacyEnabled, uint256 registeredAt))",
-    "event ActionLogged(address indexed agentAddress, string actionType, string dataHash)"
+    "function getAgent(uint256 tokenId) external view returns (tuple(address owner, uint256 inftTokenId, string metadata, bool privacyEnabled, uint256 registeredAt))",
+    "event ActionLogged(uint256 indexed tokenId, address indexed owner, string actionType, string dataHash)"
   ];
 
   const registry = new ethers.Contract(registryAddress, abi, provider);
@@ -25,7 +25,7 @@ async function verify() {
   // 1. Check Registration
   console.log(`👤 Checking Agent Identity...`);
   try {
-    const info = await registry.getAgent(agentAddress);
+    const info = await registry.getAgent(tokenId);
     if (Number(info.registeredAt) === 0) {
       console.log("❌ Status: NOT REGISTERED. Run 'mint-inft' first!");
     } else {
@@ -41,7 +41,7 @@ async function verify() {
   // 2. Check Action Logs (Events)
   console.log("\n📜 Fetching Recent Action Logs (Events)...");
   try {
-    const filter = registry.filters.ActionLogged(agentAddress);
+    const filter = registry.filters.ActionLogged(tokenId);
     const events = await registry.queryFilter(filter, -2000); // Look back 2,000 blocks
 
     if (events.length === 0) {
@@ -49,10 +49,10 @@ async function verify() {
     } else {
       console.log(`🎉 Found ${events.length} verifiable action(s) for this Agent:\n`);
       events.forEach((evt: any, i: number) => {
-        const { actionType, dataHash } = evt.args;
-        console.log(`📍 Action #${i + 1}: [${actionType}]`);
+        const { actionType, dataHash, owner } = evt.args;
+        console.log(`📍 Action #${i + 1}: [${actionType}]  (by: ${owner})`);
         console.log(`💿 Proof Hash (0G Storage): ${dataHash}`);
-        console.log(`⛓️  Explorer Link          : https://chainscan-newton.0g.ai/tx/${evt.transactionHash}`);
+        console.log(`⛓️  Explorer Link          : https://chainscan-galileo.0g.ai/tx/${evt.transactionHash}`);
         console.log("───────────────────────────────────────────────────────");
       });
     }

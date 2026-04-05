@@ -26,7 +26,7 @@ program
     console.log(chalk.bold.cyan("\n======================================================="));
     console.log(chalk.bold.cyan("   🤖  GROQ ALPHA AI — Active Autonomous Mode"));
     console.log(chalk.bold.cyan("=======================================================\n"));
-    
+
     const orchestrator = new Orchestrator();
     await orchestrator.start();
   });
@@ -40,6 +40,7 @@ program
   .option("--top <n>", "Show top N results", "5")
   .option("--export", "Export result to report.json", false)
   .option("--auto-invest", "Trigger deposit for the #1 ranked pool", false)
+  .option("--agent-id <id>", "Identity token ID to use for this session", "")
   .action(async (options) => {
     console.log(chalk.bold.cyan("\n======================================================="));
     console.log(chalk.bold.cyan("   🤖  GROQ ALPHA AI — Strategic Market Analysis"));
@@ -80,11 +81,15 @@ program
           if (rankIdx >= 0 && rankIdx < result.aiResult.rankings.length) {
             const rankedName = result.aiResult.rankings[rankIdx].poolName;
             selectedPool = result.inputPools.find(p => p.name === rankedName);
-            
+
             if (selectedPool) {
               console.log(chalk.bold.yellow(`\n💰 Enter investment amount in ETH (Default: 0.001):`));
               const inputAmount = readlineSync.question("Amount: ");
               if (inputAmount) amountStr = inputAmount;
+
+              console.log(chalk.bold.yellow(`\n🆔 Select Agent ID to use (Default: ${process.env.MY_AGENT_INFT_ID || "1"}):`));
+              const inputAgentId = readlineSync.question("Agent ID: ");
+              if (inputAgentId) options.agentId = inputAgentId;
             }
           }
         }
@@ -93,7 +98,7 @@ program
       if (selectedPool) {
         console.log(chalk.bold.magenta(`\n🚀 Routing ${selectedPool.name} into execution pipeline...`));
         const orchestrator = new Orchestrator();
-        await orchestrator.analyzePoolList([selectedPool], true, true, amountStr);
+        await orchestrator.analyzePoolList([selectedPool], true, true, amountStr, options.agentId);
       }
 
       console.log(chalk.green("\n✅ Done."));
@@ -161,7 +166,7 @@ program
     try {
       const minter = new iNFTMinter();
       const metadata: iNFTMetadata = {
-        agentId: `groq-alpha-${Math.floor(Math.random()*1000)}`,
+        agentId: `groq-alpha-${Math.floor(Math.random() * 1000)}`,
         framework: "GroqAlpha",
         capabilities: ["defi-strategy", "private-inference", "autonomous-trading"],
         modelAI: options.model,
@@ -169,7 +174,7 @@ program
         createdAt: new Date().toISOString(),
         storageUri: options.uri
       };
-      
+
       const result = await minter.mint(metadata);
       console.log(chalk.green(`\n✅ iNFT minted successfully! Token ID: ${result.tokenId}`));
       console.log(chalk.cyan(`   TX: ${result.txHash}`));
@@ -177,6 +182,5 @@ program
       console.error(chalk.red("\n❌ [iNFT] Minting failed:"), error.message || error);
     }
   });
-
 
 program.parse(process.argv);

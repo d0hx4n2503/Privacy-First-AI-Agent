@@ -62,6 +62,7 @@ contract INFT is ERC721URIStorage, IERC7857, Ownable, ReentrancyGuard {
         uint256 tokenId = _nextTokenId;
 
         _safeMint(to, tokenId);
+        _setTokenURI(tokenId, encryptedUri); // Set standard ERC721 URI for Explorers
         _encryptedURIs[tokenId] = encryptedUri;
         _metadataHashes[tokenId] = metadataHash;
 

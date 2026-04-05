@@ -14,24 +14,26 @@ async function deposit() {
 
   const provider = new ethers.JsonRpcProvider(rpcUrl);
   const wallet = new ethers.Wallet(privateKey, provider);
-  const amount = ethers.parseEther("0.01");
+  const amountStr = process.argv[2] || "0.01";
+  const amount = ethers.parseEther(amountStr);
 
-  console.log(chalk.cyan(`\n🏦 [Deposit Tool] Initializing 0.05 ETH deposit...`));
+  console.log(chalk.cyan(`\n🏦 [Deposit Tool] Initializing ${amountStr} ETH deposit...`));
   console.log(`   Source Wallet : ${wallet.address}`);
   console.log(`   Target Vault  : ${vaultAddress}`);
 
   try {
-    const tx = await wallet.sendTransaction({
-      to: vaultAddress,
-      value: amount,
-      gasLimit: 30000
+    const vaultAbi = ["function deposit() external payable"];
+    const vaultContract = new ethers.Contract(vaultAddress, vaultAbi, wallet);
+
+    const tx = await vaultContract.deposit({
+      value: amount
     });
 
     console.log(chalk.yellow(`📡 [Deposit Tool] Broadcasting transaction. Hash: ${tx.hash}`));
     
     const receipt = await tx.wait();
     if (receipt && receipt.status === 1) {
-      console.log(chalk.green(`\n✅ SUCCESS: 0.5 ETH has been safely deposited into StrategyVault!`));
+      console.log(chalk.green(`\n✅ SUCCESS: ${amountStr} ETH has been safely deposited into StrategyVault!`));
       console.log(`   Explorer Link : https://sepolia.etherscan.io/tx/${tx.hash}`);
 
       const balance = await provider.getBalance(vaultAddress);

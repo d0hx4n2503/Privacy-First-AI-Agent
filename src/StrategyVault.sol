@@ -39,12 +39,20 @@ contract StrategyVault {
     IUniswapV2Router02 public immutable v2Router;
     address public constant WETH = 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9;
 
-    event StrategyExecuted(string action, uint256 amount);
+    mapping(address => uint256) public ethBalances;
+
+    event StrategyExecuted(address indexed user, string action, uint256 amount);
+    event Deposited(address indexed user, uint256 amount);
 
     constructor(address _v2Router) {
         owner = msg.sender;
         operator = msg.sender;
         v2Router = IUniswapV2Router02(_v2Router);
+    }
+
+    function deposit() external payable {
+        ethBalances[msg.sender] += msg.value;
+        emit Deposited(msg.sender, msg.value);
     }
 
     modifier onlyOperator() {
@@ -55,8 +63,10 @@ contract StrategyVault {
     /**
      * @notice ZAPPER: Swap half ETH for Token and then Add Liquidity
      */
-    function executeV2ZapLiquidity(address token, uint256 amountEthTotal) external onlyOperator {
-        require(address(this).balance >= amountEthTotal, "Insufficient ETH");
+    function executeV2ZapLiquidity(address user, address token, uint256 amountEthTotal) external onlyOperator {
+        require(ethBalances[user] >= amountEthTotal, "Insufficient user ETH balance");
+        require(address(this).balance >= amountEthTotal, "Insufficient Vault ETH");
+        ethBalances[user] -= amountEthTotal;
 
         uint256 swapAmount = amountEthTotal / 2;
         uint256 liquidityAmount = amountEthTotal - swapAmount;
@@ -86,22 +96,29 @@ contract StrategyVault {
             block.timestamp + 600
         );
 
-        emit StrategyExecuted("zap_liquidity", amountEthTotal);
+        emit StrategyExecuted(user, "zap_liquidity", amountEthTotal);
     }
 
-    function executeV2Swap(address tokenOut, uint256 amountEth, uint256 minAmountOut) external onlyOperator {
-        require(address(this).balance >= amountEth, "Insufficient ETH");
+    function executeV2Swap(address user, address tokenOut, uint256 amountEth, uint256 minAmountOut) external onlyOperator {
+        require(ethBalances[user] >= amountEth, "Insufficient user ETH balance");
+        require(address(this).balance >= amountEth, "Insufficient Vault ETH");
+        ethBalances[user] -= amountEth;
         address[] memory path = new address[](2);
         path[0] = WETH;
         path[1] = tokenOut;
         v2Router.swapExactETHForTokens{value: amountEth}(minAmountOut, path, address(this), block.timestamp + 600);
-        emit StrategyExecuted("buy", amountEth);
+        emit StrategyExecuted(user, "buy", amountEth);
     }
 
     function withdraw(address token, uint256 amount) external {
-        require(msg.sender == owner, "Only owner");
-        if (token == address(0)) { payable(owner).transfer(amount); }
-        else { IERC20(token).transfer(owner, amount); }
+        if (token == address(0)) {
+            require(ethBalances[msg.sender] >= amount, "Insufficient ETH balance");
+            ethBalances[msg.sender] -= amount;
+            payable(msg.sender).transfer(amount);
+        } else {
+            require(msg.sender == owner, "Only owner token withdraw");
+            IERC20(token).transfer(owner, amount);
+        }
     }
 
     receive() external payable {}

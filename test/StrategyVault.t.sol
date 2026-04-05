@@ -21,8 +21,9 @@ contract StrategyVaultTest is Test {
 
         vault = new StrategyVault(V2_ROUTER);
         
-        // Give some ETH to the vault for testing if needed
-        vm.deal(address(vault), 1 ether);
+        // Give some ETH to the test contract and deposit into the vault
+        vm.deal(address(this), 1 ether);
+        vault.deposit{value: 1 ether}();
     }
 
     function testZapLiquidity() public {
@@ -33,7 +34,7 @@ contract StrategyVaultTest is Test {
 
         // Try to execute zap liquidity
         console.log("Executing Zap Liquidity with", amount, "ETH");
-        vault.executeV2ZapLiquidity(USDC, amount);
+        vault.executeV2ZapLiquidity(address(this), USDC, amount);
         
         console.log("Zap Liquidity successful!");
     }
@@ -42,7 +43,7 @@ contract StrategyVaultTest is Test {
         uint256 amount = 0.001 ether;
         
         console.log("Executing Swap with", amount, "ETH");
-        vault.executeV2Swap(USDC, amount, 0);
+        vault.executeV2Swap(address(this), USDC, amount, 0);
         
         uint256 usdcBalance = IERC20(USDC).balanceOf(address(vault));
         console.log("USDC Balance after swap:", usdcBalance);

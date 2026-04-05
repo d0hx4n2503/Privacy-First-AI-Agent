@@ -43,7 +43,7 @@ export class Orchestrator {
   /**
    * Post a proof of action to the 0G Chain AgentRegistry.
    */
-  private async logOnChainAction(type: string, dataHash: string): Promise<string | null> {
+  private async logOnChainAction(type: string, dataHash: string, tokenId?: string): Promise<string | null> {
     console.log(chalk.cyan(`📡 [0G Registry] Attesting action proof: ${type}...`));
     
     if (process.env.DRY_RUN === "true") {
@@ -60,14 +60,15 @@ export class Orchestrator {
       const wallet = new ethers.Wallet(pk!, provider);
       const registry = new ethers.Contract(
         ethers.getAddress(process.env.AGENT_REGISTRY_ADDRESS!),
-        ["function logAction(string calldata actionType, string calldata dataHash) external"],
+        ["function logAction(uint256 tokenId, string calldata actionType, string calldata dataHash) external"],
         wallet
       );
 
-      const tx = await registry.logAction(type, dataHash);
+      const inftId = parseInt(tokenId || process.env.MY_AGENT_INFT_ID || "1");
+      const tx = await registry.logAction(inftId, type, dataHash);
       await tx.wait();
       console.log(`✅ [0G Storage] Memory successfully broadcast to Storage Indexer! TX: ${tx.hash}`);
-      console.log(`   Explorer: https://chainscan-newton.0g.ai/tx/${tx.hash}`);
+      console.log(`   Explorer: https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
       return tx.hash;
     } catch (error: any) {
       console.log(chalk.green(`✅ [0G Storage] Memory broadcast accepted (Pending Indexer)`));
@@ -75,7 +76,9 @@ export class Orchestrator {
     }
   }
 
-  async analyzePoolList(pools: PoolCandidate[], autoPrompt: boolean, privacyOverride?: boolean, amountOverride?: string) {
+  async analyzePoolList(pools: PoolCandidate[], autoPrompt: boolean, privacyOverride?: boolean, amountOverride?: string, agentId?: string) {
+    const finalId = agentId || process.env.MY_AGENT_INFT_ID || "1";
+    console.log(chalk.bold.blue(`\n🤖 [Orchestrator] Operating as Agent ID: #${finalId}`));
     console.log(chalk.bold.magenta(`\n⛓️  [Orchestrator] Routing ${pools.length} AI-selected pool(s) into execution pipeline...`));
     for (const pool of pools) {
       const story: CorrelatedStory = {
@@ -92,7 +95,7 @@ export class Orchestrator {
         triggerReason: `0G AI Pool Screener selected ${pool.name} as top investment`,
         confidence: "high"
       };
-      await this.handleStory(story, autoPrompt, privacyOverride, amountOverride);
+      await this.handleStory(story, autoPrompt, privacyOverride, amountOverride, finalId);
     }
   }
 
@@ -139,13 +142,13 @@ export class Orchestrator {
   }
 
 
-  private async handleStory(story: CorrelatedStory, autoPrompt: boolean, privacyOverride?: boolean, amountOverride?: string) {
+  private async handleStory(story: CorrelatedStory, autoPrompt: boolean, privacyOverride?: boolean, amountOverride?: string, agentId?: string) {
     console.log(chalk.bgMagenta.white(`\n🚨 NEW MARKET STORY DETECTED: ${story.tokenA}/${story.tokenB} 🚨`));
     const analysis = await this.agent.analyze(story, (story as any).metadata);
 
     let attestationTx = null;
     if (analysis.storageHash) {
-      attestationTx = await this.logOnChainAction(`${analysis.strategy.action.toUpperCase()}_STRATEGY`, analysis.storageHash);
+      attestationTx = await this.logOnChainAction(`${analysis.strategy.action.toUpperCase()}_STRATEGY`, analysis.storageHash, agentId);
     }
 
     if (amountOverride) {
@@ -221,7 +224,7 @@ export class Orchestrator {
       const vaultAbi = [
         "function commitStrategy(bytes32 commitmentHash, string calldata strategyUri, bool isPrivate) external",
         "function linkExecution(bytes32 commitmentHash, string calldata txHash) external",
-        "function getStrategy(bytes32 commitmentHash) external view returns (address agent, bytes32 hash, string memory uri, bool isPrivate, uint256 timestamp, string memory txExecuted)"
+        "function getStrategy(bytes32 commitmentHash) external view returns (tuple(address agent, bytes32 hash, string uri, bool isPrivate, uint256 timestamp, string txExecuted))"
       ];
       
       const vault = new ethers.Contract(ethers.getAddress(this.privacyVaultAddress), vaultAbi, wallet);
@@ -229,9 +232,10 @@ export class Orchestrator {
 
       // 1. Check if already committed using a safer call or catch
       let exists = false;
+      let record: any = null;
       try {
-        const record = await vault.getStrategy(commitment);
-        exists = record.agent !== ethers.ZeroAddress;
+        record = await vault.getStrategy(commitment);
+        exists = record && record.agent !== ethers.ZeroAddress;
       } catch (e) {
         exists = false;
       }
@@ -240,15 +244,24 @@ export class Orchestrator {
         console.log(chalk.gray(`   📡 Committing strategy to PrivacyVault...`));
         const commitTx = await vault.commitStrategy(commitment, "", true);
         await commitTx.wait();
+        // Delay to allow RPC nodes to sync state (fixes "Not your strategy" via estimateGas due to load balancing)
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Refresh record after commit
+        record = await vault.getStrategy(commitment);
       }
 
       // 2. Link execution
+      if (record && record.txExecuted && record.txExecuted !== "") {
+        console.log(chalk.yellow(`   💡 Strategy already linked to TX: ${record.txExecuted.slice(0,10)}... skipping.`));
+        return;
+      }
+
       console.log(chalk.gray(`   📡 Linking execution hash to PrivacyVault...`));
       const linkTx = await vault.linkExecution(commitment, txHash);
       await linkTx.wait();
 
       console.log(chalk.cyan(`   ✅ Privacy Link Verified! 0G TX: ${linkTx.hash}`));
-      console.log(chalk.gray(`   Explorer: https://chainscan-newton.0g.ai/tx/${linkTx.hash}`));
+      console.log(chalk.gray(`   Explorer: https://chainscan-galileo.0g.ai/tx/${linkTx.hash}`));
     } catch (e: any) {
       console.error(chalk.red(`   ❌ Failed to link to PrivacyVault: ${e.message}`));
     }
@@ -260,7 +273,7 @@ export class Orchestrator {
     console.log(`   - Uniswap (Sepolia): https://sepolia.etherscan.io/tx/${txHash}`);
     
     if (attestationTx) {
-      console.log(`   - 0G Network Memory : https://chainscan-newton.0g.ai/tx/${attestationTx}`);
+      console.log(`   - 0G Network Memory : https://chainscan-galileo.0g.ai/tx/${attestationTx}`);
     } else {
       console.log(chalk.gray(`   - 0G Network Memory : [Broadcasting... Link available shortly]`));
     }

@@ -1,0 +1,9 @@
+PS C:\Users\pc\OneDrive\Máy tính\Privacy-first Ai\Privacy-First-AI-Agent> npx ts-node src/cli.ts mint-inft --uri "ipfs://agent-v2-identity" --model "Llama-3.3-Enclave"
+   
+💎 Generating Verifiable Identity (iNFT)...
+🎨 [iNFT] Minting ERC-7857 Agent Identity...
+📝 [Registry] 1-Click Minting & Registering address 0x335145400C12958600C0542F9180e03B917F7BbB...
+✅ [Registry+iNFT] Factory Success! Token ID #2 automatically linked! | Tx: 0x429ef75bce02961eaf09c8bf8de683fcbf36cc35593ca1e2f039844cb9b487fd
+
+✅ iNFT minted successfully! Token ID: 2
+   TX: 0x429ef75bce02961eaf09c8bf8de683fcbf36cc35593ca1e2f039844cb9b487fd
